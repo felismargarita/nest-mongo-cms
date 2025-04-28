@@ -22,10 +22,12 @@
   "dependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
+    "@nestjs/mongoose": "^11.0.3",
     "@nestjs/platform-express": "^10.0.0",
+    "mongoose": "^8.13.2",
+    "nest-cms": "workspace:*",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.8.1",
-    "nest-cms": "workspace:*"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

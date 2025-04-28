@@ -1,15 +1,13 @@
 import { Module, DynamicModule } from '@nestjs/common';
-import { CMSController } from './cms.controller';
 import { CMSService } from './cms.service';
-import { MongooseModule } from '@nestjs/mongoose';
 import { OptionsType } from './types';
+import { CMSController } from './cms.controller';
 
 @Module({})
 export class CMSModule {
-  static register(options: OptionsType): DynamicModule {
+  static register(options: Omit<OptionsType, 'path'>): DynamicModule {
     return {
       module: CMSModule,
-      imports: [MongooseModule.forRoot('mongodb://localhost/cms-test')],
       providers: [
         {
           provide: 'CONFIG_OPTIONS',
