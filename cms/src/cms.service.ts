@@ -11,11 +11,7 @@ export class CMSService {
     @Inject('CONFIG_OPTIONS') private readonly options: OptionsType,
   ) {}
 
-  test() {
-    // this.connection.model('Cat').exists
-  }
-
-  findById(schema: string, id: string, projection: any, options: any) {
+  findById(schema: string, id: string, projection?: any, options?: any) {
     return this.connection.model(schema).findById(id, projection, options);
   }
 
@@ -34,7 +30,6 @@ export class CMSService {
   }
 
   create(schema: string, data: any, options: any) {
-    console.log('create', data);
     return this.connection.model(schema).create(data, options);
   }
 

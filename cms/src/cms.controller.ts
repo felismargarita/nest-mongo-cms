@@ -11,7 +11,7 @@ export class CMSController {
     @Param('id') id: string,
     @Body() body: any,
   ): Promise<any> {
-    const { projection = {}, options = {} } = body;
+    const { projection, options } = body;
     return this.service.findById(schema, id, projection, options);
   }
 
@@ -20,7 +20,7 @@ export class CMSController {
     @Param('schema') schema: string,
     @Body() body: any,
   ): Promise<any> {
-    const { filter = {}, projection = {}, options = {} } = body;
+    const { filter, projection, options } = body;
     return this.service.find(schema, filter, projection, options);
   }
 
@@ -29,13 +29,13 @@ export class CMSController {
     @Param('schema') schema: string,
     @Body() body: any,
   ): Promise<any> {
-    const { filter = {}, projection = {}, options = {} } = body;
+    const { filter, projection, options } = body;
     return this.service.findOne(schema, filter, projection, options);
   }
 
   @Post('/:schema/create')
   create(@Param('schema') schema: string, @Body() body: any): Promise<any> {
-    const { data = {}, options } = body;
+    const { data, options } = body;
     return this.service.create(schema, data, options);
   }
 
@@ -44,31 +44,31 @@ export class CMSController {
     @Param('schema') schema: string,
     @Body() body: any,
   ): Promise<any> {
-    const { filter = {}, update = {}, options = {} } = body;
+    const { filter, update, options } = body;
     return this.service.findOneAndUpdate(schema, filter, update, options);
   }
 
   @Put('/:schema/updateOne')
   updateOne(@Param('schema') schema: string, @Body() body: any): Promise<any> {
-    const { filter = {}, update = {}, options = {} } = body;
+    const { filter, update, options } = body;
     return this.service.updateOne(schema, filter, update, options);
   }
 
   @Put('/:schema/updateMany')
   updateMany(@Param('schema') schema: string, @Body() body: any): Promise<any> {
-    const { filter = {}, update = {}, options = {} } = body;
+    const { filter, update, options } = body;
     return this.service.updateMany(schema, filter, update, options);
   }
 
   @Delete('/:schema/deleteOne')
   deleteOne(@Param('schema') schema: string, @Body() body: any): Promise<any> {
-    const { filter = {}, options = {} } = body;
+    const { filter, options } = body;
     return this.service.deleteOne(schema, filter, options);
   }
 
   @Delete('/:schema/deleteMany')
   deleteMany(@Param('schema') schema: string, @Body() body: any): Promise<any> {
-    const { filter = {}, options = {} } = body;
+    const { filter, options } = body;
     return this.service.deleteMany(schema, filter, options);
   }
 
@@ -77,13 +77,13 @@ export class CMSController {
     @Param('schema') schema: string,
     @Body() body: any,
   ): Promise<any> {
-    const { filter = {}, options = {} } = body;
+    const { filter, options } = body;
     return this.service.findOneAndDelete(schema, filter, options);
   }
 
   @Put('/:schema/replaceOne')
   replaceOne(@Param('schema') schema: string, @Body() body: any): Promise<any> {
-    const { filter = {}, replacement = {}, options = {} } = body;
+    const { filter, replacement, options } = body;
     return this.service.replace(schema, filter, replacement, options);
   }
 
@@ -92,7 +92,7 @@ export class CMSController {
     @Param('schema') schema: string,
     @Body() body: any,
   ): Promise<any> {
-    const { filter = {}, replacement = {}, options = {} } = body;
+    const { filter, replacement, options } = body;
     return this.service.findOneAndReplace(schema, filter, replacement, options);
   }
 }
