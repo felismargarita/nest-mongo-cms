@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { OptionsType } from './types';
+import { OptionsType, FindOptionsType, FilterType, RecordType } from './types';
 
 @Injectable()
 export class CMSService {
@@ -11,64 +11,189 @@ export class CMSService {
     @Inject('CONFIG_OPTIONS') private readonly options: OptionsType,
   ) {}
 
-  findById(schema: string, id: string, projection?: any, options?: any) {
-    return this.connection.model(schema).findById(id, projection, options);
+  _connection = {
+    find: async (schema: string, options: FindOptionsType) => {
+      const { skip, limit } = options;
+      const model = this.connection.model(schema);
+      const documents = await model
+        .find()
+        .skip(skip)
+        .limit(limit)
+        .sort()
+        .exec();
+
+      return Promise.all(
+        documents.map((doc) => this.executeAfterQueryHooks(schema, doc)),
+      );
+    },
+    findOne: async (schema: string, id: string) => {
+      const model = this.connection.model(schema);
+      const document = await model.findById(id).exec();
+      return this.executeAfterQueryHooks(schema, document);
+    },
+    create: async (schema: string, _data: RecordType | RecordType[]) => {
+      let data = Array.isArray(_data) ? _data : [_data];
+
+      this.logger.debug('create data is', schema, data);
+      data = await Promise.all(
+        data.map((item) => {
+          return this.executeBeforeCreateHooks(schema, item);
+        }),
+      );
+      const model = this.connection.model(schema);
+      this.logger.debug('create data with', schema, data);
+      let documents = await model.create(data, { new: true });
+      this.logger.debug('executeAfterCreateHooks', schema, documents);
+      documents = await Promise.all(
+        documents.map((doc) => {
+          return this.executeAfterCreateHooks(schema, doc);
+        }),
+      );
+      return Array.isArray(_data) ? documents : documents[0];
+    },
+    update: async (schema: string, filter: FilterType, data: RecordType) => {
+      let documents = await this.connection.model(schema).find(filter);
+      documents = await Promise.all(
+        documents.map((doc) => {
+          return this.executeBeforeUpdateHooks(schema, { ...doc, ...data });
+        }),
+      );
+
+      documents = await Promise.all(
+        documents.map((doc) => {
+          return this.connection
+            .model(schema)
+            .findByIdAndUpdate(doc._id, doc, { new: true });
+        }),
+      );
+
+      return Promise.all(
+        documents.map((doc) => {
+          return this.executeAfterUpdateHooks(schema, doc);
+        }),
+      );
+    },
+    updateById: async (schema: string, id: string, data: RecordType) => {
+      let document = await this.connection.model(schema).findById(id);
+      document = await this.executeBeforeUpdateHooks(schema, {
+        ...document,
+        ...data,
+      });
+
+      document = await this.connection
+        .model(schema)
+        .findByIdAndUpdate(document._id, document, { new: true });
+
+      return this.executeAfterUpdateHooks(schema, document);
+    },
+    delete: async (schema: string, filter: FilterType) => {
+      const documents = await this.connection.model(schema).find(filter);
+
+      await Promise.all(
+        documents.map((doc) => {
+          return this.executeBeforeDeleteHooks(schema, doc);
+        }),
+      );
+
+      await this.connection.model(schema).deleteMany(filter);
+
+      await Promise.all(
+        documents.map((doc) => {
+          return this.executeAfterDeleteHooks(schema, doc);
+        }),
+      );
+
+      return documents;
+    },
+    deleteById: async (schema: string, id: string) => {
+      const document = await this.connection.model(schema).findById(id);
+      await this.executeBeforeDeleteHooks(schema, document);
+
+      await this.connection.model(schema).findByIdAndDelete(id);
+
+      await this.executeAfterDeleteHooks(schema, document);
+      return document;
+    },
+  };
+
+  async executeAfterQueryHooks(schema: string, document: Document) {
+    const hooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
+    for (const hook of hooks) {
+      document = await hook({ data: document, db: this._connection });
+    }
+    return document;
   }
 
-  findOne(schema: string, filter: any, projection: any, options: any) {
-    return this.connection.model(schema).findOne(filter, projection, options);
+  async executeBeforeCreateHooks(schema: string, data: RecordType) {
+    const hooks = this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
+    for (const hook of hooks) {
+      data = await hook({ data, db: this._connection });
+    }
+    return data;
   }
 
-  find(schema: string, filter: any, projection: any, options: any) {
-    return this.connection.model(schema).find(filter, projection, options);
+  async executeAfterCreateHooks(schema: string, document: Document) {
+    const hooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
+    for (const hook of hooks) {
+      document = await hook({ data: document, db: this._connection });
+    }
+    return document;
   }
 
-  findOneAndUpdate(schema: string, filter: any, update: any, options: any) {
-    return this.connection
-      .model(schema)
-      .findOneAndUpdate(filter, update, options);
+  async executeBeforeUpdateHooks(schema: string, data: RecordType) {
+    const hooks = this.options.schemas?.[schema]?.hooks.beforeUpdate ?? [];
+    for (const hook of hooks) {
+      data = await hook({ data, db: this._connection });
+    }
+    return data;
   }
 
-  create(schema: string, data: any, options: any) {
-    return this.connection.model(schema).create(data, options);
+  async executeAfterUpdateHooks(schema: string, document: Document) {
+    const hooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
+    for (const hook of hooks) {
+      document = await hook({ data: document, db: this._connection });
+    }
+    return document;
   }
 
-  updateOne(schema: string, filter: any, update: any, options: any) {
-    return this.connection.model(schema).updateOne(filter, update, options);
+  async executeBeforeDeleteHooks(schema: string, data: RecordType) {
+    const hooks = this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
+    for (const hook of hooks) {
+      await hook({ data, db: this._connection });
+    }
+  }
+  async executeAfterDeleteHooks(schema: string, document: Document) {
+    const hooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
+    for (const hook of hooks) {
+      await hook({ data: document, db: this._connection });
+    }
   }
 
-  updateMany(schema: string, filter: any, update: any, options: any) {
-    return this.connection.model(schema).updateMany(filter, update, options);
+  find(schema: string, options: FindOptionsType) {
+    return this._connection.find(schema, options);
   }
 
-  deleteOne(schema: string, filter: any, options: any): Promise<any> {
-    return this.connection.model(schema).deleteOne(filter, options);
+  findById(schema: string, id: string) {
+    return this._connection.findOne(schema, id);
   }
 
-  deleteMany(schema: string, filter: any, options: any): Promise<any> {
-    return this.connection.model(schema).deleteMany(filter, options);
+  create(schema: string, data: RecordType | RecordType[]) {
+    return this._connection.create(schema, data);
   }
 
-  findOneAndDelete(schema: string, filter: any, options: any) {
-    return this.connection.model(schema).findOneAndDelete(filter, options);
+  update(schema: string, filter: FilterType, data: RecordType) {
+    return this._connection.update(schema, filter, data);
   }
 
-  replace(schema: string, filter: any, replacement: any, options: any) {
-    return this.connection
-      .model(schema)
-      .replaceOne(filter, replacement, options);
+  updateById(schema: string, id: string, data: RecordType) {
+    return this._connection.updateById(schema, id, data);
   }
 
-  findOneAndReplace(
-    schema: string,
-    filter: any,
-    replacement: any,
-    options: any,
-  ) {
-    return this.connection
-      .model(schema)
-      .findOneAndReplace(filter, replacement, options);
+  deleteMany(schema: string, filter: FilterType) {
+    return this._connection.delete(schema, filter);
   }
 
-  //TODO: implement remaining mongoose methods, like count, distinct, exists
+  deleteById(schema: string, id: string) {
+    return this._connection.deleteById(schema, id);
+  }
 }

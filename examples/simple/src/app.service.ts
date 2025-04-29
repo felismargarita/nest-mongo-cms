@@ -6,7 +6,6 @@ import { Connection } from 'mongoose';
 export class AppService {
   constructor(@InjectConnection() public readonly connection: Connection) {}
   getHello(): string {
-    // this.connection.model('Book').
     return 'Hello World!';
   }
 }
