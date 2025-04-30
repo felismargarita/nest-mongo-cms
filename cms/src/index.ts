@@ -1,2 +1,3 @@
-export { WrapperModule as CMSModule } from './wrapper.module';
+export * from './wrapper.module';
 export * from './cms.service';
+export * from './cms.decorator';

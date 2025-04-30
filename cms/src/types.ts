@@ -36,19 +36,22 @@ export type AfterUpdateHookType = HookType;
 export type BeforeDeleteHookType = HookTypeNoReturn;
 export type AfterDeleteHookType = HookTypeNoReturn;
 
+export type SchemaHooksType = {
+  afterQuery?: AfterQueryHookType[];
+  beforeCreate?: BeforeCreateHookType[];
+  afterCreate?: AfterCreateHookType[];
+  beforeUpdate?: BeforeUpdateHookType[];
+  afterUpdate?: AfterUpdateHookType[];
+  beforeDelete?: BeforeDeleteHookType[];
+  afterDelete?: AfterDeleteHookType[];
+};
+
 export type OptionsType = {
   path?: string;
+  inject?: any[];
   schemas?: {
     [schema: string]: {
-      hooks?: {
-        afterQuery?: AfterQueryHookType[];
-        beforeCreate?: BeforeCreateHookType[];
-        afterCreate?: AfterCreateHookType[];
-        beforeUpdate?: BeforeUpdateHookType[];
-        afterUpdate?: AfterUpdateHookType[];
-        beforeDelete?: BeforeDeleteHookType[];
-        afterDelete?: AfterDeleteHookType[];
-      };
+      hooks?: SchemaHooksType;
     };
   };
 };
@@ -56,9 +59,6 @@ export type OptionsType = {
 export type FindOptionsType = {
   skip?: number;
   limit?: number;
-  // sort?: string;
-  // projection?: string;
-  // filter?: string;
 };
 
 export type FilterType = {

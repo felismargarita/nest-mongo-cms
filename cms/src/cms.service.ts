@@ -1,3 +1,4 @@
+import { HooksCollector } from './hooks-collector.service';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
@@ -9,6 +10,7 @@ export class CMSService {
   constructor(
     @InjectConnection() public readonly connection: Connection,
     @Inject('CONFIG_OPTIONS') private readonly options: OptionsType,
+    private readonly hooksCollector: HooksCollector,
   ) {}
 
   _connection = {
@@ -117,55 +119,102 @@ export class CMSService {
   };
 
   async executeAfterQueryHooks(schema: string, document: Document) {
-    const hooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
-    for (const hook of hooks) {
+    const optionHooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].afterQuery ?? [];
+    for (const hook of optionHooks) {
       document = await hook({ data: document, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      document = await hook.bind(this)({
+        data: document,
+        db: this._connection,
+      });
     }
     return document;
   }
 
   async executeBeforeCreateHooks(schema: string, data: RecordType) {
-    const hooks = this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
-    for (const hook of hooks) {
+    const optionHooks =
+      this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].beforeCreate ?? [];
+    for (const hook of optionHooks) {
       data = await hook({ data, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      data = await hook.bind(this)({ data, db: this._connection });
     }
     return data;
   }
 
   async executeAfterCreateHooks(schema: string, document: Document) {
-    const hooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
-    for (const hook of hooks) {
+    const optionHooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].afterCreate ?? [];
+    for (const hook of optionHooks) {
       document = await hook({ data: document, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      document = await hook.bind(this)({
+        data: document,
+        db: this._connection,
+      });
     }
     return document;
   }
 
   async executeBeforeUpdateHooks(schema: string, data: RecordType) {
-    const hooks = this.options.schemas?.[schema]?.hooks.beforeUpdate ?? [];
-    for (const hook of hooks) {
+    const optionHooks =
+      this.options.schemas?.[schema]?.hooks.beforeUpdate ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].beforeUpdate ?? [];
+    for (const hook of optionHooks) {
       data = await hook({ data, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      data = await hook.bind(this)({ data, db: this._connection });
     }
     return data;
   }
 
   async executeAfterUpdateHooks(schema: string, document: Document) {
-    const hooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
-    for (const hook of hooks) {
+    const optionHooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].afterUpdate ?? [];
+    for (const hook of optionHooks) {
       document = await hook({ data: document, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      document = await hook.bind(this)({
+        data: document,
+        db: this._connection,
+      });
     }
     return document;
   }
 
   async executeBeforeDeleteHooks(schema: string, data: RecordType) {
-    const hooks = this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
-    for (const hook of hooks) {
+    const optionHooks =
+      this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].beforeDelete ?? [];
+    for (const hook of optionHooks) {
       await hook({ data, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      await hook.bind(this)({ data, db: this._connection });
     }
   }
   async executeAfterDeleteHooks(schema: string, document: Document) {
-    const hooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
-    for (const hook of hooks) {
+    const optionHooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema].afterDelete ?? [];
+    for (const hook of optionHooks) {
       await hook({ data: document, db: this._connection });
+    }
+    for (const hook of decorationHooks) {
+      await hook.bind(this)({ data: document, db: this._connection });
     }
   }
 

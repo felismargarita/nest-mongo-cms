@@ -5,6 +5,7 @@ import { CMSModule } from 'nest-cms';
 import { BookSchema } from './book.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ChapterSchema } from './chapter.schema';
+import { HookService } from './hook.service';
 
 @Module({
   imports: [
@@ -24,12 +25,17 @@ import { ChapterSchema } from './chapter.schema';
       schemas: {
         books: {
           hooks: {
+            afterQuery: [
+              ({ data }) => {
+                console.log('options hooks')
+                return data
+              } 
+            ],
             beforeCreate: [
               async ({ data, db }) => {
                 data._id = `book_${new Date().getTime().toString()}`;
                 const { chapters = [], ...rest } = data;
                 const result = await db.create('chapters', chapters);
-                console.log('result', result);
                 return {
                   ...rest,
                   chapters: result.map((item) => item._id),
@@ -52,6 +58,6 @@ import { ChapterSchema } from './chapter.schema';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, HookService],
 })
 export class AppModule {}
