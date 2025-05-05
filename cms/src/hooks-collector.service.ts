@@ -1,5 +1,5 @@
 import { ModuleRef, Reflector } from '@nestjs/core';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import {
   CMS_HOOK_META,
   methodHookMetas,
@@ -9,6 +9,7 @@ import { SchemaHooksType } from './types';
 
 @Injectable()
 export class HooksCollector implements OnModuleInit {
+  logger: Logger = new Logger(HooksCollector.name);
   constructor(
     private readonly reflector: Reflector,
     private readonly moduleRef: ModuleRef,
@@ -40,6 +41,21 @@ export class HooksCollector implements OnModuleInit {
                     META,
                     instance[methodName],
                   );
+                  const schema =
+                    hookSchemaMethod === SCHEMA_DEFAULT
+                      ? hookSchemaCls
+                      : hookSchemaMethod;
+                  if (schema === SCHEMA_DEFAULT) {
+                    this.logger.error(
+                      'schema parameter is missing, please set it in method or class level decorator',
+                      {
+                        // instance: instance,
+                        method: methodName,
+                        hook: META.description,
+                      },
+                    );
+                    process.exit(1);
+                  }
                   if (hookSchemaMethod) {
                     this.mergeHook(
                       hookSchemaMethod === SCHEMA_DEFAULT

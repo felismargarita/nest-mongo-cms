@@ -1,9 +1,11 @@
 import { SetMetadata } from '@nestjs/common';
 
-const CMS_HOOK_META = Symbol('CMS_HOOK_META');
-const CMSHook = (schema: string) => SetMetadata(CMS_HOOK_META, schema);
-
 const SCHEMA_DEFAULT = 'SchemaDefault';
+
+const CMS_HOOK_META = Symbol('CMS_HOOK_META');
+
+const CMSHook = (schema?: string) =>
+  SetMetadata(CMS_HOOK_META, schema ?? SCHEMA_DEFAULT);
 
 const CMS_HOOK_AFTER_QUERY_META = Symbol('afterQuery');
 const AfterQuery = (schema?: string) =>
