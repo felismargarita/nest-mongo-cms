@@ -8,6 +8,8 @@ import {
   AfterDelete,
   BeforeUpdate,
   AfterUpdate,
+  AfterCreateHookParams,
+  BeforeCreateHookParams,
 } from 'nest-cms';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
@@ -18,18 +20,16 @@ export class HookService {
   constructor(@InjectConnection() public readonly connection: Connection) {}
 
   @BeforeCreate()
-  @AfterCreate()
-  @AfterQuery()
-  @BeforeUpdate()
-  @AfterUpdate()
-  @BeforeDelete()
-  @AfterDelete()
-  async test_my_function({ data }) {
-    this.connection.model('chapters').create({
-      _id: 'chaptor' + new Date().getTime().toString(),
-      name: 'dadsada',
-      content: 'asddasda',
-    });
+  customize_book_id({ data }: BeforeCreateHookParams) {
+    console.log(data)
+    data._id = `book_${new Date().getTime().toString()}`;
     return data;
   }
+
+  @AfterCreate()
+  async after_create_book({ data, db, document }: AfterCreateHookParams) {
+    console.log(data, document);
+    return document;
+  }
+
 }

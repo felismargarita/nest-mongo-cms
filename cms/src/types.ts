@@ -13,22 +13,33 @@ type DBType = {
 };
 
 export type HookType = ({
+  schema,
   data,
   db,
 }: {
+  schema: string;
   data: any;
   db: DBType;
 }) => Promise<any>;
+
 export type HookTypeNoReturn = ({
+  schema,
   data,
   db,
 }: {
+  schema: string;
   data: any;
   db: DBType;
 }) => Promise<void>;
+
 export type AfterQueryHookType = HookType;
 export type BeforeCreateHookType = HookType;
-export type AfterCreateHookType = HookType;
+export type AfterCreateHookType = (params: {
+  schema: string;
+  data: RecordType;
+  db: DBType;
+  document: Document;
+}) => Promise<Document>;
 
 export type BeforeUpdateHookType = HookType;
 export type AfterUpdateHookType = HookType;
@@ -45,6 +56,18 @@ export type SchemaHooksType = {
   beforeDelete?: BeforeDeleteHookType[];
   afterDelete?: AfterDeleteHookType[];
 };
+
+//export hook params
+type ExtractHookParams<T extends keyof SchemaHooksType> =
+  SchemaHooksType[T][number] extends (X: infer P) => any ? P : never;
+
+export type AfterQueryHookParams = ExtractHookParams<'afterQuery'>;
+export type AfterCreateHookParams = ExtractHookParams<'afterCreate'>;
+export type BeforeCreateHookParams = ExtractHookParams<'beforeCreate'>;
+export type AfterUpdateHookParams = ExtractHookParams<'afterUpdate'>;
+export type BeforeUpdateHookParams = ExtractHookParams<'beforeUpdate'>;
+export type AfterDeleteHookParams = ExtractHookParams<'afterDelete'>;
+export type BeforeDeleteHookParams = ExtractHookParams<'beforeDelete'>;
 
 export type OptionsType = {
   path?: string;

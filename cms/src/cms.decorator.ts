@@ -3,32 +3,32 @@ import { SetMetadata } from '@nestjs/common';
 const CMS_HOOK_META = Symbol('CMS_HOOK_META');
 const CMSHook = (schema: string) => SetMetadata(CMS_HOOK_META, schema);
 
-const SCHEMA_DEFAULT_SYMBOL = 'SchemaDefault';
+const SCHEMA_DEFAULT = 'SchemaDefault';
 
 const CMS_HOOK_AFTER_QUERY_META = Symbol('afterQuery');
 const AfterQuery = (schema?: string) =>
-  SetMetadata(CMS_HOOK_AFTER_QUERY_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_AFTER_QUERY_META, schema ?? SCHEMA_DEFAULT);
 
 const CMS_HOOK_BEFORE_CREATE_META = Symbol('beforeCreate');
 const BeforeCreate = (schema?: string) =>
-  SetMetadata(CMS_HOOK_BEFORE_CREATE_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_BEFORE_CREATE_META, schema ?? SCHEMA_DEFAULT);
 const CMS_HOOK_AFTER_CREATE_META = Symbol('afterCreate');
 const AfterCreate = (schema?: string) =>
-  SetMetadata(CMS_HOOK_AFTER_CREATE_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_AFTER_CREATE_META, schema ?? SCHEMA_DEFAULT);
 
 const CMS_HOOK_BEFORE_UPDATE_META = Symbol('beforeUpdate');
 const BeforeUpdate = (schema?: string) =>
-  SetMetadata(CMS_HOOK_BEFORE_UPDATE_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_BEFORE_UPDATE_META, schema ?? SCHEMA_DEFAULT);
 const CMS_HOOK_AFTER_UPDATE_META = Symbol('afterUpdate');
 const AfterUpdate = (schema?: string) =>
-  SetMetadata(CMS_HOOK_AFTER_UPDATE_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_AFTER_UPDATE_META, schema ?? SCHEMA_DEFAULT);
 
 const CMS_HOOK_BEFORE_DELETE_META = Symbol('beforeDelete');
 const BeforeDelete = (schema?: string) =>
-  SetMetadata(CMS_HOOK_BEFORE_DELETE_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_BEFORE_DELETE_META, schema ?? SCHEMA_DEFAULT);
 const CMS_HOOK_AFTER_DELETE_META = Symbol('afterDelete');
 const AfterDelete = (schema?: string) =>
-  SetMetadata(CMS_HOOK_AFTER_DELETE_META, schema ?? SCHEMA_DEFAULT_SYMBOL);
+  SetMetadata(CMS_HOOK_AFTER_DELETE_META, schema ?? SCHEMA_DEFAULT);
 
 const methodHookMetas = [
   CMS_HOOK_AFTER_QUERY_META,
@@ -43,7 +43,7 @@ const methodHookMetas = [
 export {
   CMS_HOOK_META,
   CMSHook,
-  SCHEMA_DEFAULT_SYMBOL,
+  SCHEMA_DEFAULT,
   CMS_HOOK_AFTER_QUERY_META,
   AfterQuery,
   CMS_HOOK_BEFORE_CREATE_META,

@@ -33,25 +33,13 @@ export class CMSService {
       const document = await model.findById(id).exec();
       return this.executeAfterQueryHooks(schema, document);
     },
-    create: async (schema: string, _data: RecordType | RecordType[]) => {
-      let data = Array.isArray(_data) ? _data : [_data];
-
-      this.logger.debug('create data is', schema, data);
-      data = await Promise.all(
-        data.map((item) => {
-          return this.executeBeforeCreateHooks(schema, item);
-        }),
-      );
-      const model = this.connection.model(schema);
-      this.logger.debug('create data with', schema, data);
-      let documents = await model.create(data, { new: true });
-      this.logger.debug('executeAfterCreateHooks', schema, documents);
-      documents = await Promise.all(
-        documents.map((doc) => {
-          return this.executeAfterCreateHooks(schema, doc);
-        }),
-      );
-      return Array.isArray(_data) ? documents : documents[0];
+    create: async (schema: string, data: RecordType | RecordType[]) => {
+      if (Array.isArray(data)) {
+        return Promise.all(
+          data.map((_data: RecordType) => this.createOne(schema, _data)),
+        );
+      }
+      return this.createOne(schema, data);
     },
     update: async (schema: string, filter: FilterType, data: RecordType) => {
       let documents = await this.connection.model(schema).find(filter);
@@ -118,15 +106,30 @@ export class CMSService {
     },
   };
 
+  private async createOne(schema: string, data: RecordType) {
+    data = await this.executeBeforeCreateHooks(schema, data);
+    const model = this.connection.model(schema);
+    const docs = await model.create([data], { new: true });
+    if (docs.length === 1) {
+      const document = await this.executeAfterCreateHooks(schema, docs[0], data);
+      return document;
+    }
+    throw new Error(
+      'document count does not match expectation, should be 1, but actual is: ' +
+        docs.length,
+    );
+  }
+
   async executeAfterQueryHooks(schema: string, document: Document) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterQuery ?? [];
     for (const hook of optionHooks) {
-      document = await hook({ data: document, db: this._connection });
+      document = await hook({ schema, data: document, db: this._connection });
     }
     for (const hook of decorationHooks) {
       document = await hook.bind(this)({
+        schema,
         data: document,
         db: this._connection,
       });
@@ -140,24 +143,35 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].beforeCreate ?? [];
     for (const hook of optionHooks) {
-      data = await hook({ data, db: this._connection });
+      data = await hook({ schema, data, db: this._connection });
     }
     for (const hook of decorationHooks) {
-      data = await hook.bind(this)({ data, db: this._connection });
+      data = await hook.bind(this)({ schema, data, db: this._connection });
     }
     return data;
   }
 
-  async executeAfterCreateHooks(schema: string, document: Document) {
+  async executeAfterCreateHooks(
+    schema: string,
+    document: Document,
+    data: RecordType,
+  ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterCreate ?? [];
     for (const hook of optionHooks) {
-      document = await hook({ data: document, db: this._connection });
+      document = await hook({
+        schema,
+        document: document,
+        data,
+        db: this._connection,
+      });
     }
     for (const hook of decorationHooks) {
       document = await hook.bind(this)({
-        data: document,
+        schema,
+        document: document,
+        data,
         db: this._connection,
       });
     }
@@ -170,10 +184,10 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].beforeUpdate ?? [];
     for (const hook of optionHooks) {
-      data = await hook({ data, db: this._connection });
+      data = await hook({ schema, data, db: this._connection });
     }
     for (const hook of decorationHooks) {
-      data = await hook.bind(this)({ data, db: this._connection });
+      data = await hook.bind(this)({ schema, data, db: this._connection });
     }
     return data;
   }
@@ -183,10 +197,11 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterUpdate ?? [];
     for (const hook of optionHooks) {
-      document = await hook({ data: document, db: this._connection });
+      document = await hook({ schema, data: document, db: this._connection });
     }
     for (const hook of decorationHooks) {
       document = await hook.bind(this)({
+        schema,
         data: document,
         db: this._connection,
       });
@@ -200,10 +215,10 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].beforeDelete ?? [];
     for (const hook of optionHooks) {
-      await hook({ data, db: this._connection });
+      await hook({ schema, data, db: this._connection });
     }
     for (const hook of decorationHooks) {
-      await hook.bind(this)({ data, db: this._connection });
+      await hook.bind(this)({ schema, data, db: this._connection });
     }
   }
   async executeAfterDeleteHooks(schema: string, document: Document) {
@@ -211,10 +226,10 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterDelete ?? [];
     for (const hook of optionHooks) {
-      await hook({ data: document, db: this._connection });
+      await hook({ schema, data: document, db: this._connection });
     }
     for (const hook of decorationHooks) {
-      await hook.bind(this)({ data: document, db: this._connection });
+      await hook.bind(this)({ schema, data: document, db: this._connection });
     }
   }
 

@@ -3,7 +3,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   CMS_HOOK_META,
   methodHookMetas,
-  SCHEMA_DEFAULT_SYMBOL,
+  SCHEMA_DEFAULT,
 } from './cms.decorator';
 import { SchemaHooksType } from './types';
 
@@ -18,6 +18,7 @@ export class HooksCollector implements OnModuleInit {
 
   onModuleInit() {
     this.collect();
+    console.log(this.schemaHooks)
   }
 
   collect() {
@@ -41,11 +42,12 @@ export class HooksCollector implements OnModuleInit {
                   );
                   if (hookSchemaMethod) {
                     this.mergeHook(
-                      hookSchemaMethod === SCHEMA_DEFAULT_SYMBOL
+                      hookSchemaMethod === SCHEMA_DEFAULT
                         ? hookSchemaCls
                         : hookSchemaMethod,
                       META.description as keyof SchemaHooksType,
                       instance[methodName],
+                      this.schemaHooks,
                     );
                   }
                 });
@@ -57,12 +59,13 @@ export class HooksCollector implements OnModuleInit {
     }
   }
 
-  private mergeHook(
+  private mergeHook<T extends keyof SchemaHooksType>(
     schema: string,
-    type: keyof SchemaHooksType,
-    hook: SchemaHooksType[keyof SchemaHooksType][number],
+    type: T,
+    hook: SchemaHooksType[T][number],
+    schemaHooks: SchemaHooksType,
   ) {
-    const allHooks = this.schemaHooks[schema];
+    const allHooks = schemaHooks[schema];
     if (allHooks) {
       const hooks = allHooks[type];
       if (hooks) {
