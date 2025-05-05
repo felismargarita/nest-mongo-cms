@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { CMSModule } from 'nest-cms';
+import { CMSModule } from 'nest-mongo-cms';
 import { BookSchema } from './book.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ChapterSchema } from './chapter.schema';

@@ -19,7 +19,7 @@ export class HooksCollector implements OnModuleInit {
 
   onModuleInit() {
     this.collect();
-    console.log(this.schemaHooks)
+    console.log(this.schemaHooks);
   }
 
   collect() {

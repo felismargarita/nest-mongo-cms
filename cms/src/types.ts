@@ -1,3 +1,5 @@
+import { Request, Response } from 'express';
+
 type DBType = {
   find: (schema: string, options: FindOptionsType) => Promise<any>;
   findOne: (schema: string, id: string) => Promise<any>;
@@ -12,24 +14,37 @@ type DBType = {
   deleteById: (schema: string, id: string) => Promise<any>;
 };
 
+export type HookContext = {
+  request: Request;
+  response: Response;
+  session: any;
+  params: any;
+  query: any;
+  body: any;
+};
+
 export type HookType = ({
   schema,
   data,
   db,
+  context,
 }: {
   schema: string;
   data: any;
   db: DBType;
+  context: HookContext;
 }) => Promise<any>;
 
 export type HookTypeNoReturn = ({
   schema,
   data,
   db,
+  context,
 }: {
   schema: string;
   data: any;
   db: DBType;
+  context: HookContext;
 }) => Promise<void>;
 
 export type AfterQueryHookType = HookType;
@@ -39,6 +54,7 @@ export type AfterCreateHookType = (params: {
   data: RecordType;
   db: DBType;
   document: Document;
+  context: HookContext;
 }) => Promise<Document>;
 
 export type BeforeUpdateHookType = HookType;

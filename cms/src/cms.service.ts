@@ -2,11 +2,18 @@ import { HooksCollector } from './hooks-collector.service';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { OptionsType, FindOptionsType, FilterType, RecordType } from './types';
+import {
+  OptionsType,
+  FindOptionsType,
+  FilterType,
+  RecordType,
+  HookContext,
+} from './types';
 
 @Injectable()
 export class CMSService {
   logger = new Logger(CMSService.name);
+  private hookContext: HookContext;
   constructor(
     @InjectConnection() public readonly connection: Connection,
     @Inject('CONFIG_OPTIONS') private readonly options: OptionsType,
@@ -111,7 +118,11 @@ export class CMSService {
     const model = this.connection.model(schema);
     const docs = await model.create([data], { new: true });
     if (docs.length === 1) {
-      const document = await this.executeAfterCreateHooks(schema, docs[0], data);
+      const document = await this.executeAfterCreateHooks(
+        schema,
+        docs[0],
+        data,
+      );
       return document;
     }
     throw new Error(
@@ -125,13 +136,19 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterQuery ?? [];
     for (const hook of optionHooks) {
-      document = await hook({ schema, data: document, db: this._connection });
+      document = await hook({
+        schema,
+        data: document,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     for (const hook of decorationHooks) {
       document = await hook.bind(this)({
         schema,
         data: document,
         db: this._connection,
+        context: this.hookContext,
       });
     }
     return document;
@@ -143,10 +160,20 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].beforeCreate ?? [];
     for (const hook of optionHooks) {
-      data = await hook({ schema, data, db: this._connection });
+      data = await hook({
+        schema,
+        data,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     for (const hook of decorationHooks) {
-      data = await hook.bind(this)({ schema, data, db: this._connection });
+      data = await hook.bind(this)({
+        schema,
+        data,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     return data;
   }
@@ -165,6 +192,7 @@ export class CMSService {
         document: document,
         data,
         db: this._connection,
+        context: this.hookContext,
       });
     }
     for (const hook of decorationHooks) {
@@ -173,6 +201,7 @@ export class CMSService {
         document: document,
         data,
         db: this._connection,
+        context: this.hookContext,
       });
     }
     return document;
@@ -184,10 +213,20 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].beforeUpdate ?? [];
     for (const hook of optionHooks) {
-      data = await hook({ schema, data, db: this._connection });
+      data = await hook({
+        schema,
+        data,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     for (const hook of decorationHooks) {
-      data = await hook.bind(this)({ schema, data, db: this._connection });
+      data = await hook.bind(this)({
+        schema,
+        data,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     return data;
   }
@@ -197,13 +236,19 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterUpdate ?? [];
     for (const hook of optionHooks) {
-      document = await hook({ schema, data: document, db: this._connection });
+      document = await hook({
+        schema,
+        data: document,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     for (const hook of decorationHooks) {
       document = await hook.bind(this)({
         schema,
         data: document,
         db: this._connection,
+        context: this.hookContext,
       });
     }
     return document;
@@ -215,10 +260,20 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].beforeDelete ?? [];
     for (const hook of optionHooks) {
-      await hook({ schema, data, db: this._connection });
+      await hook({
+        schema,
+        data,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     for (const hook of decorationHooks) {
-      await hook.bind(this)({ schema, data, db: this._connection });
+      await hook.bind(this)({
+        schema,
+        data,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
   }
   async executeAfterDeleteHooks(schema: string, document: Document) {
@@ -226,38 +281,69 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema].afterDelete ?? [];
     for (const hook of optionHooks) {
-      await hook({ schema, data: document, db: this._connection });
+      await hook({
+        schema,
+        data: document,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
     for (const hook of decorationHooks) {
-      await hook.bind(this)({ schema, data: document, db: this._connection });
+      await hook.bind(this)({
+        schema,
+        data: document,
+        db: this._connection,
+        context: this.hookContext,
+      });
     }
   }
 
-  find(schema: string, options: FindOptionsType) {
+  find(schema: string, options: FindOptionsType, context: HookContext) {
+    this.hookContext = context;
     return this._connection.find(schema, options);
   }
 
-  findById(schema: string, id: string) {
+  findById(schema: string, id: string, context: HookContext) {
+    this.hookContext = context;
     return this._connection.findOne(schema, id);
   }
 
-  create(schema: string, data: RecordType | RecordType[]) {
+  create(
+    schema: string,
+    data: RecordType | RecordType[],
+    context: HookContext,
+  ) {
+    this.hookContext = context;
     return this._connection.create(schema, data);
   }
 
-  update(schema: string, filter: FilterType, data: RecordType) {
+  update(
+    schema: string,
+    filter: FilterType,
+    data: RecordType,
+    context: HookContext,
+  ) {
+    this.hookContext = context;
     return this._connection.update(schema, filter, data);
   }
 
-  updateById(schema: string, id: string, data: RecordType) {
+  updateById(
+    schema: string,
+    id: string,
+    data: RecordType,
+    context: HookContext,
+  ) {
+    this.hookContext = context;
     return this._connection.updateById(schema, id, data);
   }
 
-  deleteMany(schema: string, filter: FilterType) {
+  deleteMany(schema: string, filter: FilterType, context: HookContext) {
+    this.hookContext = context;
     return this._connection.delete(schema, filter);
   }
 
-  deleteById(schema: string, id: string) {
+  deleteById(schema: string, id: string, context: HookContext) {
+    this.hookContext = context;
     return this._connection.deleteById(schema, id);
   }
 }
