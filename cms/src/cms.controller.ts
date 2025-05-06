@@ -17,7 +17,7 @@ import { Request, Response } from 'express';
 const createCMSController = (path: string = '/cms') => {
   @Controller(path)
   class CMSController {
-    constructor(private readonly service: CMSService) {}
+    constructor(public readonly service: CMSService) {}
 
     @Get('/:schema')
     async find(

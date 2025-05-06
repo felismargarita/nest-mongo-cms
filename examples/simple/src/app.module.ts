@@ -6,25 +6,42 @@ import { BookSchema } from './book.schema';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ChapterSchema } from './chapter.schema';
 import { HookService } from './hook.service';
+import { Hook2Service } from './hook2.service';
 
 @Module({
   imports: [
     MongooseModule.forRoot('mongodb://localhost/cms-test', {
       connectionName: 'library1',
     }),
-    MongooseModule.forRoot('mongodb://localhost/cms-test', {
+    MongooseModule.forRoot('mongodb://localhost/cms-new', {
       connectionName: 'library2',
     }),
-    MongooseModule.forFeature([
-      {
-        name: 'books',
-        schema: BookSchema,
-      },
-      {
-        name: 'chapters',
-        schema: ChapterSchema,
-      },
-    ], 'library1'),
+    MongooseModule.forFeature(
+      [
+        {
+          name: 'books',
+          schema: BookSchema,
+        },
+        {
+          name: 'chapters',
+          schema: ChapterSchema,
+        },
+      ],
+      'library1',
+    ),
+    MongooseModule.forFeature(
+      [
+        {
+          name: 'books',
+          schema: BookSchema,
+        },
+        {
+          name: 'chapters',
+          schema: ChapterSchema,
+        },
+      ],
+      'library2',
+    ),
     CMSModule.register({
       path: '/cms1',
       connectionName: 'library1',
@@ -35,6 +52,6 @@ import { HookService } from './hook.service';
     }),
   ],
   controllers: [AppController],
-  providers: [AppService, HookService],
+  providers: [AppService, HookService, Hook2Service],
 })
 export class AppModule {}

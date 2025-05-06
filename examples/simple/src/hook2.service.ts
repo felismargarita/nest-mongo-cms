@@ -8,8 +8,8 @@ import {
 } from 'nest-mongo-cms';
 
 @Injectable()
-@CMSHook({ connection: 'library1' })
-export class HookService {
+@CMSHook({ connection: 'library2' })
+export class Hook2Service {
   constructor() {}
 
   @BeforeCreate('books')
