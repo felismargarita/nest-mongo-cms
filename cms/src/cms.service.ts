@@ -28,7 +28,7 @@ export class CMSService {
           .find()
           .skip(skip)
           .limit(limit)
-          .sort()
+          .sort({ name: 'asc' })
           .exec();
         return await Promise.all(
           documents.map((doc) => this.executeAfterQueryHooks(schema, doc)),

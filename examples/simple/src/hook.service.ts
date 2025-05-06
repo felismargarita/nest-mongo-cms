@@ -39,7 +39,6 @@ export class HookService {
     document,
     context,
   }: AfterCreateHookParams) {
-    throw new Error('test error from AfterCreate');
     // console.log(data, document);
     console.log(context.body);
     // context.response.send(document)
@@ -65,7 +64,6 @@ export class HookService {
 
   @BeforeDelete('books')
   beforeDeleteHooktest(params: BeforeDeleteHookParams) {
-    throw new Error('test error from beforeDeleteHooktest');
     console.log('beforeDeleteHooktest', params);
   }
 

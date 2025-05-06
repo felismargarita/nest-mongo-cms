@@ -135,6 +135,8 @@ export type OptionsType = {
 export type FindOptionsType = {
   skip?: number;
   limit?: number;
+  sort?: { [key: string]: 'asc' | 'desc' };
+  filter?: Record<string, any>;
 };
 
 export type FilterType = {

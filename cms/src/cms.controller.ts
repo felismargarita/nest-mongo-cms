@@ -13,6 +13,8 @@ import {
 } from '@nestjs/common';
 import { CMSService } from './cms.service';
 import { Request, Response } from 'express';
+import { parseSortParams } from './utils/parseSortParams';
+import { parseFilterParams } from './utils/parseFilterParams';
 
 const createCMSController = (path: string = '/cms') => {
   @Controller(path)
@@ -24,6 +26,9 @@ const createCMSController = (path: string = '/cms') => {
       @Param('schema') schema: string,
       @Query('skip') skip: number = 0,
       @Query('limit') limit: number = 10,
+      @Query('sort') sort: string = '',
+      @Query('filterType') filterType = 'json',
+      @Query('filter') filter: string = '{}',
       @Req() request: Request,
       @Res({ passthrough: true }) response: Response,
       @Session() session: any,
@@ -36,6 +41,8 @@ const createCMSController = (path: string = '/cms') => {
         {
           skip: Number(skip),
           limit: Number(limit),
+          sort: parseSortParams(sort),
+          filter: parseFilterParams(filterType, filter),
         },
         { request, response, session, params, query, body },
       );
