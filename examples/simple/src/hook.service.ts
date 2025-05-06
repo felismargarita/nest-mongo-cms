@@ -7,12 +7,14 @@ import {
   AfterUpdate,
   BeforeDelete,
   AfterDelete,
+  AfterError,
   AfterCreateHookParams,
   BeforeCreateHookParams,
   BeforeUpdateHookParams,
   AfterUpdateHookParams,
   BeforeDeleteHookParams,
   AfterDeleteHookParams,
+  AfterErrorHookParams,
 } from 'nest-mongo-cms';
 
 @Injectable()
@@ -37,6 +39,7 @@ export class HookService {
     document,
     context,
   }: AfterCreateHookParams) {
+    throw new Error('test error from AfterCreate');
     // console.log(data, document);
     console.log(context.body);
     // context.response.send(document)
@@ -62,11 +65,17 @@ export class HookService {
 
   @BeforeDelete('books')
   beforeDeleteHooktest(params: BeforeDeleteHookParams) {
+    throw new Error('test error from beforeDeleteHooktest');
     console.log('beforeDeleteHooktest', params);
   }
 
   @AfterDelete('books')
   afterDeleteHooktest(params: AfterDeleteHookParams) {
     console.log('afterDeleteHooktest', params);
+  }
+
+  @AfterError('books')
+  afterErrorTest(params: AfterErrorHookParams) {
+    console.log(params);
   }
 }

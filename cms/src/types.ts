@@ -89,6 +89,14 @@ export type AfterDeleteHookType = (params: {
   context: HookContext;
 }) => Promise<void>;
 
+export type AfterErrorHookType = (params: {
+  schema: string;
+  path: string;
+  error: Error;
+  db: DBType;
+  context: HookContext;
+}) => Promise<void>;
+
 export type SchemaHooksType = {
   afterQuery?: AfterQueryHookType[];
   beforeCreate?: BeforeCreateHookType[];
@@ -97,6 +105,7 @@ export type SchemaHooksType = {
   afterUpdate?: AfterUpdateHookType[];
   beforeDelete?: BeforeDeleteHookType[];
   afterDelete?: AfterDeleteHookType[];
+  afterError?: AfterErrorHookType[];
 };
 
 //export hook params
@@ -110,6 +119,7 @@ export type AfterUpdateHookParams = ExtractHookParams<'afterUpdate'>;
 export type BeforeUpdateHookParams = ExtractHookParams<'beforeUpdate'>;
 export type AfterDeleteHookParams = ExtractHookParams<'afterDelete'>;
 export type BeforeDeleteHookParams = ExtractHookParams<'beforeDelete'>;
+export type AfterErrorHookParams = ExtractHookParams<'afterError'>;
 
 export type OptionsType = {
   path?: string;

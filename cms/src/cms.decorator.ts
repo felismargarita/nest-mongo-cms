@@ -38,6 +38,10 @@ const CMS_HOOK_AFTER_DELETE_META = Symbol('afterDelete');
 const AfterDelete = (schema?: string) =>
   SetMetadata(CMS_HOOK_AFTER_DELETE_META, schema ?? SCHEMA_DEFAULT);
 
+const CMS_HOOK_AFTER_ERROR_META = Symbol('afterError');
+const AfterError = (schema?: string) =>
+  SetMetadata(CMS_HOOK_AFTER_ERROR_META, schema ?? SCHEMA_DEFAULT);
+
 const methodHookMetas = [
   CMS_HOOK_AFTER_QUERY_META,
   CMS_HOOK_BEFORE_CREATE_META,
@@ -46,6 +50,7 @@ const methodHookMetas = [
   CMS_HOOK_AFTER_UPDATE_META,
   CMS_HOOK_BEFORE_DELETE_META,
   CMS_HOOK_AFTER_DELETE_META,
+  CMS_HOOK_AFTER_ERROR_META,
 ];
 
 export {
@@ -68,4 +73,6 @@ export {
   CMS_HOOK_AFTER_DELETE_META,
   AfterDelete,
   methodHookMetas,
+  CMS_HOOK_AFTER_ERROR_META,
+  AfterError,
 };

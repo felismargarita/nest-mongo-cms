@@ -21,59 +21,95 @@ export class CMSService {
 
   _connection = {
     find: async (schema: string, options: FindOptionsType) => {
-      const { skip, limit } = options;
-      const model = this.connection.model(schema);
-      const documents = await model
-        .find()
-        .skip(skip)
-        .limit(limit)
-        .sort()
-        .exec();
-
-      return Promise.all(
-        documents.map((doc) => this.executeAfterQueryHooks(schema, doc)),
-      );
+      try {
+        const { skip, limit } = options;
+        const model = this.connection.model(schema);
+        const documents = await model
+          .find()
+          .skip(skip)
+          .limit(limit)
+          .sort()
+          .exec();
+        return await Promise.all(
+          documents.map((doc) => this.executeAfterQueryHooks(schema, doc)),
+        );
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'find', e);
+        throw e;
+      }
     },
     findOne: async (schema: string, id: string) => {
-      const model = this.connection.model(schema);
-      const document = await model.findById(id).exec();
-      return this.executeAfterQueryHooks(schema, document);
+      try {
+        const model = this.connection.model(schema);
+        const document = await model.findById(id).exec();
+        return await this.executeAfterQueryHooks(schema, document);
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'findOne', e);
+        throw e;
+      }
     },
     create: async (schema: string, data: RecordType | RecordType[]) => {
-      if (Array.isArray(data)) {
-        return Promise.all(
-          data.map((_data: RecordType) => this.createOne(schema, _data)),
-        );
+      try {
+        if (Array.isArray(data)) {
+          return await Promise.all(
+            data.map((_data: RecordType) => this.createOne(schema, _data)),
+          );
+        }
+        return await this.createOne(schema, data);
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'create', e);
+        throw e;
       }
-      return this.createOne(schema, data);
     },
     update: async (schema: string, filter: FilterType, data: RecordType) => {
-      const originalDocuments: any[] = await this.connection
-        .model(schema)
-        .find(filter)
-        .lean()
-        .exec();
-      return Promise.all(
-        originalDocuments.map(async (originalDoc) => {
-          return this.updateOne(schema, data, originalDoc);
-        }),
-      );
+      try {
+        const originalDocuments: any[] = await this.connection
+          .model(schema)
+          .find(filter)
+          .lean()
+          .exec();
+        return await Promise.all(
+          originalDocuments.map(async (originalDoc) => {
+            return this.updateOne(schema, data, originalDoc);
+          }),
+        );
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'update', e);
+        throw e;
+      }
     },
     updateById: async (schema: string, id: string, data: RecordType) => {
-      return this.connection
-        .model(schema)
-        .findById(id)
-        .lean()
-        .then((originalDoc: any) => this.updateOne(schema, data, originalDoc));
+      try {
+        const originalDoc: any = await this.connection
+          .model(schema)
+          .findById(id)
+          .lean();
+        return await this.updateOne(schema, data, originalDoc);
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'updateById', e);
+        throw e;
+      }
     },
     delete: async (schema: string, filter: FilterType) => {
-      this.validateFilter(schema, filter);
-      const documents = await this.connection.model(schema).find(filter);
-      return Promise.all(documents.map((doc) => this.deleteOne(schema, doc)));
+      try {
+        this.validateFilter(schema, filter);
+        const documents = await this.connection.model(schema).find(filter);
+        return await Promise.all(
+          documents.map((doc) => this.deleteOne(schema, doc)),
+        );
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'delete', e);
+        throw e;
+      }
     },
     deleteById: async (schema: string, id: string) => {
-      const document = await this.connection.model(schema).findById(id);
-      return this.deleteOne(schema, document);
+      try {
+        const document = await this.connection.model(schema).findById(id);
+        return await this.deleteOne(schema, document);
+      } catch (e) {
+        await this.executeAfterErrorHooks(schema, 'deleteById', e);
+        throw e;
+      }
     },
   };
 
@@ -322,6 +358,30 @@ export class CMSService {
       await hook.bind(this)({
         schema,
         document,
+        db: this._connection,
+        context: this.hookContext,
+      });
+    }
+  }
+
+  async executeAfterErrorHooks(schema: string, path: string, error: Error) {
+    const optionHooks = this.options.schemas?.[schema]?.hooks.afterError ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema]?.afterError ?? [];
+    for (const hook of optionHooks) {
+      await hook({
+        schema,
+        path,
+        error,
+        db: this._connection,
+        context: this.hookContext,
+      });
+    }
+    for (const hook of decorationHooks) {
+      await hook.bind(this)({
+        schema,
+        path,
+        error,
         db: this._connection,
         context: this.hookContext,
       });
