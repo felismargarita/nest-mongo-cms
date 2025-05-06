@@ -9,7 +9,9 @@ import { HookService } from './hook.service';
 
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb://localhost/cms-test'),
+    MongooseModule.forRoot('mongodb://localhost/cms-test', {
+      connectionName: 'library',
+    }),
     MongooseModule.forFeature([
       {
         name: 'books',
@@ -19,9 +21,10 @@ import { HookService } from './hook.service';
         name: 'chapters',
         schema: ChapterSchema,
       },
-    ]),
+    ], 'library'),
     CMSModule.register({
       path: '/cms',
+      connectionName: 'library',
     }),
   ],
   controllers: [AppController],

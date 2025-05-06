@@ -3,24 +3,16 @@ import {
   CMSHook,
   BeforeCreate,
   AfterCreate,
-  AfterQuery,
-  BeforeDelete,
-  AfterDelete,
-  BeforeUpdate,
-  AfterUpdate,
   AfterCreateHookParams,
   BeforeCreateHookParams,
 } from 'nest-mongo-cms';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
-import { response } from 'express';
 
 @Injectable()
-@CMSHook('books')
+@CMSHook({ connection: 'library' })
 export class HookService {
-  constructor(@InjectConnection() public readonly connection: Connection) {}
+  constructor() {}
 
-  @BeforeCreate()
+  @BeforeCreate('books')
   customize_book_id({ data, context }: BeforeCreateHookParams) {
     // console.log(data);
     const _id = `book_${new Date().getTime().toString()}`;
@@ -30,7 +22,7 @@ export class HookService {
     };
   }
 
-  @AfterCreate()
+  @AfterCreate('books')
   async after_create_book({ data, db, document, context }: AfterCreateHookParams) {
     // console.log(data, document);
     console.log(context.body);

@@ -1,11 +1,12 @@
 import { ModuleRef, Reflector } from '@nestjs/core';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import {
   CMS_HOOK_META,
   methodHookMetas,
   SCHEMA_DEFAULT,
 } from './cms.decorator';
 import { SchemaHooksType } from './types';
+import { OptionsType } from './types';
 
 @Injectable()
 export class HooksCollector implements OnModuleInit {
@@ -13,13 +14,13 @@ export class HooksCollector implements OnModuleInit {
   constructor(
     private readonly reflector: Reflector,
     private readonly moduleRef: ModuleRef,
+    @Inject('CONFIG_OPTIONS') private readonly options: OptionsType,
   ) {}
 
   public schemaHooks: { [schema: string]: SchemaHooksType } = {};
 
   onModuleInit() {
     this.collect();
-    console.log(this.schemaHooks);
   }
 
   collect() {
@@ -27,11 +28,15 @@ export class HooksCollector implements OnModuleInit {
     for (const [, module] of modules) {
       for (const [, { metatype, instance }] of module.providers) {
         if (typeof metatype === 'function') {
-          const hookSchemaCls = this.reflector.get<string>(
-            CMS_HOOK_META,
-            metatype,
-          );
-          if (hookSchemaCls) {
+          const { connection: hookCMSConnection, schema: hookSchemaCls } =
+            this.reflector.get<{ connection?: string; schema?: string }>(
+              CMS_HOOK_META,
+              metatype,
+            ) ?? {};
+          if (
+            hookCMSConnection &&
+            hookCMSConnection === this.options.connectionName
+          ) {
             Object.getOwnPropertyNames(metatype.prototype).forEach(
               (methodName) => {
                 if (methodName === 'constructor') return;

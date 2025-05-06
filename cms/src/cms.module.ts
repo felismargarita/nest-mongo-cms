@@ -3,6 +3,9 @@ import { CMSService } from './cms.service';
 import { OptionsType } from './types';
 import { CMSController } from './cms.controller';
 import { HooksCollector } from './hooks-collector.service';
+import { getConnectionToken } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
+
 @Module({})
 export class CMSModule {
   static register(options: Omit<OptionsType, 'path'>): DynamicModule {
@@ -14,7 +17,13 @@ export class CMSModule {
           useValue: options,
         },
         HooksCollector,
-        CMSService,
+        {
+          provide: CMSService,
+          useFactory(connection: Connection, hooksCollector: HooksCollector) {
+            return new CMSService(connection, options, hooksCollector);
+          },
+          inject: [getConnectionToken(options.connectionName), HooksCollector],
+        },
       ],
       exports: [CMSService],
       controllers: [CMSController],

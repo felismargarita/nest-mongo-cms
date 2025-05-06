@@ -1,6 +1,5 @@
 import { HooksCollector } from './hooks-collector.service';
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
+import { Injectable, Logger } from '@nestjs/common';
 import { Connection } from 'mongoose';
 import {
   OptionsType,
@@ -15,8 +14,8 @@ export class CMSService {
   logger = new Logger(CMSService.name);
   private hookContext: HookContext;
   constructor(
-    @InjectConnection() public readonly connection: Connection,
-    @Inject('CONFIG_OPTIONS') private readonly options: OptionsType,
+    private readonly connection: Connection,
+    private readonly options: OptionsType,
     private readonly hooksCollector: HooksCollector,
   ) {}
 
@@ -134,7 +133,7 @@ export class CMSService {
   async executeAfterQueryHooks(schema: string, document: Document) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].afterQuery ?? [];
+      this.hooksCollector.schemaHooks[schema]?.afterQuery ?? [];
     for (const hook of optionHooks) {
       document = await hook({
         schema,
@@ -158,7 +157,7 @@ export class CMSService {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].beforeCreate ?? [];
+      this.hooksCollector.schemaHooks[schema]?.beforeCreate ?? [];
     for (const hook of optionHooks) {
       data = await hook({
         schema,
@@ -185,7 +184,7 @@ export class CMSService {
   ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].afterCreate ?? [];
+      this.hooksCollector.schemaHooks[schema]?.afterCreate ?? [];
     for (const hook of optionHooks) {
       document = await hook({
         schema,
@@ -211,7 +210,7 @@ export class CMSService {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeUpdate ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].beforeUpdate ?? [];
+      this.hooksCollector.schemaHooks[schema]?.beforeUpdate ?? [];
     for (const hook of optionHooks) {
       data = await hook({
         schema,
@@ -234,7 +233,7 @@ export class CMSService {
   async executeAfterUpdateHooks(schema: string, document: Document) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].afterUpdate ?? [];
+      this.hooksCollector.schemaHooks[schema]?.afterUpdate ?? [];
     for (const hook of optionHooks) {
       document = await hook({
         schema,
@@ -258,7 +257,7 @@ export class CMSService {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].beforeDelete ?? [];
+      this.hooksCollector.schemaHooks[schema]?.beforeDelete ?? [];
     for (const hook of optionHooks) {
       await hook({
         schema,
@@ -279,7 +278,7 @@ export class CMSService {
   async executeAfterDeleteHooks(schema: string, document: Document) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
     const decorationHooks =
-      this.hooksCollector.schemaHooks[schema].afterDelete ?? [];
+      this.hooksCollector.schemaHooks[schema]?.afterDelete ?? [];
     for (const hook of optionHooks) {
       await hook({
         schema,

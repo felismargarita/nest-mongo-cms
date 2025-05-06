@@ -87,6 +87,7 @@ export type BeforeDeleteHookParams = ExtractHookParams<'beforeDelete'>;
 
 export type OptionsType = {
   path?: string;
+  connectionName?: string;
   inject?: any[];
   schemas?: {
     [schema: string]: {
