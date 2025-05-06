@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Connection } from 'mongoose';
 
 type DBType = {
   find: (schema: string, options: FindOptionsType) => Promise<any>;
@@ -23,29 +24,21 @@ export type HookContext = {
   body: any;
 };
 
-export type HookType = ({
-  schema,
-  data,
-  db,
-  context,
-}: {
+export type HookType = (params: {
   schema: string;
   data: any;
   db: DBType;
+  rawDb: Connection;
   context: HookContext;
-}) => Promise<any>;
+}) => Promise<any> | any;
 
-export type HookTypeNoReturn = ({
-  schema,
-  data,
-  db,
-  context,
-}: {
+export type HookTypeNoReturn = (params: {
   schema: string;
   data: any;
   db: DBType;
+  rawDb: Connection;
   context: HookContext;
-}) => Promise<void>;
+}) => Promise<void> | void;
 
 export type AfterQueryHookType = HookType;
 export type BeforeCreateHookType = HookType;
@@ -53,49 +46,55 @@ export type AfterCreateHookType = (params: {
   schema: string;
   data: RecordType;
   db: DBType;
+  rawDb: Connection;
   document: Document;
   context: HookContext;
-}) => Promise<Document>;
+}) => Promise<Document> | Document;
 
 export type BeforeUpdateHookType = (params: {
   schema: string;
   data: RecordType;
   db: DBType;
+  rawDb: Connection;
   originalDocument: Document;
   targetDocument: Document;
   context: HookContext;
-}) => Promise<Document>;
+}) => Promise<Document> | Document;
 
 export type AfterUpdateHookType = (params: {
   schema: string;
   data: RecordType;
   db: DBType;
+  rawDb: Connection;
   originalDocument: Document;
   currentDocument: Document;
   context: HookContext;
-}) => Promise<Document>;
+}) => Promise<Document> | Document;
 
 export type BeforeDeleteHookType = (params: {
   schema: string;
   document: Document;
   db: DBType;
+  rawDb: Connection;
   context: HookContext;
-}) => Promise<void>;
+}) => Promise<void> | void;
 
 export type AfterDeleteHookType = (params: {
   schema: string;
   document: Document;
   db: DBType;
+  rawDb: Connection;
   context: HookContext;
-}) => Promise<void>;
+}) => Promise<void> | void;
 
 export type AfterErrorHookType = (params: {
   schema: string;
   path: string;
   error: Error;
   db: DBType;
+  rawDb: Connection;
   context: HookContext;
-}) => Promise<void>;
+}) => Promise<void> | void;
 
 export type SchemaHooksType = {
   afterQuery?: AfterQueryHookType[];
@@ -130,6 +129,7 @@ export type OptionsType = {
       hooks?: SchemaHooksType;
     };
   };
+  plugins?: Array<(options: OptionsType) => OptionsType>;
 };
 
 export type FindOptionsType = {

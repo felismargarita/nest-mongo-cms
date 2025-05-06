@@ -188,6 +188,7 @@ export class CMSService {
         schema,
         data: document,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -196,6 +197,7 @@ export class CMSService {
         schema,
         data: document,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -212,6 +214,7 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -220,6 +223,7 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -240,6 +244,7 @@ export class CMSService {
         document: document,
         data,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -249,6 +254,7 @@ export class CMSService {
         document: document,
         data,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -270,6 +276,7 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        rawDb: this.connection,
         originalDocument,
         targetDocument,
         context: this.hookContext,
@@ -280,6 +287,7 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        rawDb: this.connection,
         originalDocument,
         targetDocument,
         context: this.hookContext,
@@ -302,6 +310,7 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        rawDb: this.connection,
         originalDocument,
         currentDocument,
         context: this.hookContext,
@@ -312,6 +321,7 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        rawDb: this.connection,
         originalDocument,
         currentDocument,
         context: this.hookContext,
@@ -330,6 +340,7 @@ export class CMSService {
         schema,
         document,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -338,6 +349,7 @@ export class CMSService {
         schema,
         document,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -351,6 +363,7 @@ export class CMSService {
         schema,
         document,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -359,6 +372,7 @@ export class CMSService {
         schema,
         document,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -374,6 +388,7 @@ export class CMSService {
         path,
         error,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }
@@ -383,6 +398,7 @@ export class CMSService {
         path,
         error,
         db: this._connection,
+        rawDb: this.connection,
         context: this.hookContext,
       });
     }

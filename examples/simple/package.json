@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "mongoose": "^8.13.2",
     "nest-mongo-cms": "workspace:*",
+    "@nest-mongo-cms/plugins": "workspace:*",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1"
   },

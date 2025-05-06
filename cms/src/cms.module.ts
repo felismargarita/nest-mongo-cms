@@ -9,6 +9,18 @@ import { Connection } from 'mongoose';
 @Module({})
 export class CMSModule {
   static register(options: OptionsType): DynamicModule {
+    console.log('before plugin', options)
+
+    /**
+     * Inject plugins
+     */
+    if (Array.isArray(options.plugins) && options.plugins.length) {
+      options = options.plugins?.reduce((pre, pluginFn) => {
+        return pluginFn(pre);
+      }, options);
+    }
+    console.log('after plugin', options)
+
     return {
       module: CMSModule,
       providers: [

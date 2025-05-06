@@ -7,6 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ChapterSchema } from './chapter.schema';
 import { HookService } from './hook.service';
 import { Hook2Service } from './hook2.service';
+import { VersionControl } from '@nest-mongo-cms/plugins';
 
 @Module({
   imports: [
@@ -45,6 +46,9 @@ import { Hook2Service } from './hook2.service';
     CMSModule.register({
       path: '/cms1',
       connectionName: 'library1',
+      plugins: [
+        VersionControl({ books: { max: 10, collection: '__books_version' } }),
+      ],
     }),
     CMSModule.register({
       path: '/cms2',
