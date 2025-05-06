@@ -1,14 +1,14 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { CMSService } from './cms.service';
 import { OptionsType } from './types';
-import { CMSController } from './cms.controller';
+import { createCMSController } from './cms.controller';
 import { HooksCollector } from './hooks-collector.service';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 
 @Module({})
 export class CMSModule {
-  static register(options: Omit<OptionsType, 'path'>): DynamicModule {
+  static register(options: OptionsType): DynamicModule {
     return {
       module: CMSModule,
       providers: [
@@ -26,7 +26,7 @@ export class CMSModule {
         },
       ],
       exports: [CMSService],
-      controllers: [CMSController],
+      controllers: [createCMSController(options.path)],
     };
   }
 }
