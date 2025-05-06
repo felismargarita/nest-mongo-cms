@@ -57,11 +57,37 @@ export type AfterCreateHookType = (params: {
   context: HookContext;
 }) => Promise<Document>;
 
-export type BeforeUpdateHookType = HookType;
-export type AfterUpdateHookType = HookType;
+export type BeforeUpdateHookType = (params: {
+  schema: string;
+  data: RecordType;
+  db: DBType;
+  originalDocument: Document;
+  targetDocument: Document;
+  context: HookContext;
+}) => Promise<Document>;
 
-export type BeforeDeleteHookType = HookTypeNoReturn;
-export type AfterDeleteHookType = HookTypeNoReturn;
+export type AfterUpdateHookType = (params: {
+  schema: string;
+  data: RecordType;
+  db: DBType;
+  originalDocument: Document;
+  currentDocument: Document;
+  context: HookContext;
+}) => Promise<Document>;
+
+export type BeforeDeleteHookType = (params: {
+  schema: string;
+  document: Document;
+  db: DBType;
+  context: HookContext;
+}) => Promise<void>;
+
+export type AfterDeleteHookType = (params: {
+  schema: string;
+  document: Document;
+  db: DBType;
+  context: HookContext;
+}) => Promise<void>;
 
 export type SchemaHooksType = {
   afterQuery?: AfterQueryHookType[];

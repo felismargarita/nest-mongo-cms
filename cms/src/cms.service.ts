@@ -48,67 +48,32 @@ export class CMSService {
       return this.createOne(schema, data);
     },
     update: async (schema: string, filter: FilterType, data: RecordType) => {
-      let documents = await this.connection.model(schema).find(filter);
-      documents = await Promise.all(
-        documents.map((doc) => {
-          return this.executeBeforeUpdateHooks(schema, { ...doc, ...data });
-        }),
-      );
-
-      documents = await Promise.all(
-        documents.map((doc) => {
-          return this.connection
-            .model(schema)
-            .findByIdAndUpdate(doc._id, doc, { new: true });
-        }),
-      );
-
+      const originalDocuments: any[] = await this.connection
+        .model(schema)
+        .find(filter)
+        .lean()
+        .exec();
       return Promise.all(
-        documents.map((doc) => {
-          return this.executeAfterUpdateHooks(schema, doc);
+        originalDocuments.map(async (originalDoc) => {
+          return this.updateOne(schema, data, originalDoc);
         }),
       );
     },
     updateById: async (schema: string, id: string, data: RecordType) => {
-      let document = await this.connection.model(schema).findById(id);
-      document = await this.executeBeforeUpdateHooks(schema, {
-        ...document,
-        ...data,
-      });
-
-      document = await this.connection
+      return this.connection
         .model(schema)
-        .findByIdAndUpdate(document._id, document, { new: true });
-
-      return this.executeAfterUpdateHooks(schema, document);
+        .findById(id)
+        .lean()
+        .then((originalDoc: any) => this.updateOne(schema, data, originalDoc));
     },
     delete: async (schema: string, filter: FilterType) => {
+      this.validateFilter(schema, filter);
       const documents = await this.connection.model(schema).find(filter);
-
-      await Promise.all(
-        documents.map((doc) => {
-          return this.executeBeforeDeleteHooks(schema, doc);
-        }),
-      );
-
-      await this.connection.model(schema).deleteMany(filter);
-
-      await Promise.all(
-        documents.map((doc) => {
-          return this.executeAfterDeleteHooks(schema, doc);
-        }),
-      );
-
-      return documents;
+      return Promise.all(documents.map((doc) => this.deleteOne(schema, doc)));
     },
     deleteById: async (schema: string, id: string) => {
       const document = await this.connection.model(schema).findById(id);
-      await this.executeBeforeDeleteHooks(schema, document);
-
-      await this.connection.model(schema).findByIdAndDelete(id);
-
-      await this.executeAfterDeleteHooks(schema, document);
-      return document;
+      return this.deleteOne(schema, document);
     },
   };
 
@@ -128,6 +93,54 @@ export class CMSService {
       'document count does not match expectation, should be 1, but actual is: ' +
         docs.length,
     );
+  }
+
+  private async updateOne(
+    schema: string,
+    data: RecordType,
+    originalDoc: Document & { _id: any },
+  ) {
+    const hookedData = await this.executeBeforeUpdateHooks(
+      schema,
+      data,
+      { ...originalDoc, ...data },
+      originalDoc,
+    );
+    const currentDoc = (await this.connection
+      .model(schema)
+      .findByIdAndUpdate(originalDoc._id, hookedData, {
+        new: true,
+      })
+      .lean()) as any;
+    return this.executeAfterUpdateHooks(
+      schema,
+      hookedData,
+      originalDoc,
+      currentDoc,
+    );
+  }
+
+  private async deleteOne(schema: string, document: any) {
+    await this.executeBeforeDeleteHooks(schema, document);
+
+    await this.connection.model(schema).deleteOne({ _id: document._id });
+
+    await this.executeAfterDeleteHooks(schema, document);
+
+    return document;
+  }
+
+  private validateFilter(schema: string, filter: RecordType) {
+    if (Object.keys(filter).length === 0) {
+      throw new Error('filter is required when deleting many documents!');
+    }
+    const paths = this.connection.model(schema).schema.paths;
+    const validKeys = Object.keys(paths);
+    if (Object.keys(filter).every((path) => !validKeys.includes(path))) {
+      throw new Error(
+        'at least 1 valid field is required when deleting many documents!',
+      );
+    }
   }
 
   async executeAfterQueryHooks(schema: string, document: Document) {
@@ -206,7 +219,12 @@ export class CMSService {
     return document;
   }
 
-  async executeBeforeUpdateHooks(schema: string, data: RecordType) {
+  async executeBeforeUpdateHooks(
+    schema: string,
+    data: RecordType,
+    targetDocument: Document,
+    originalDocument: Document,
+  ) {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeUpdate ?? [];
     const decorationHooks =
@@ -216,6 +234,8 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        originalDocument,
+        targetDocument,
         context: this.hookContext,
       });
     }
@@ -224,36 +244,47 @@ export class CMSService {
         schema,
         data,
         db: this._connection,
+        originalDocument,
+        targetDocument,
         context: this.hookContext,
       });
     }
     return data;
   }
 
-  async executeAfterUpdateHooks(schema: string, document: Document) {
+  async executeAfterUpdateHooks(
+    schema: string,
+    data: RecordType,
+    originalDocument: Document,
+    currentDocument: Document,
+  ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterUpdate ?? [];
     for (const hook of optionHooks) {
-      document = await hook({
+      currentDocument = await hook({
         schema,
-        data: document,
+        data,
         db: this._connection,
+        originalDocument,
+        currentDocument,
         context: this.hookContext,
       });
     }
     for (const hook of decorationHooks) {
-      document = await hook.bind(this)({
+      currentDocument = await hook.bind(this)({
         schema,
-        data: document,
+        data,
         db: this._connection,
+        originalDocument,
+        currentDocument,
         context: this.hookContext,
       });
     }
-    return document;
+    return currentDocument;
   }
 
-  async executeBeforeDeleteHooks(schema: string, data: RecordType) {
+  async executeBeforeDeleteHooks(schema: string, document: Document) {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
     const decorationHooks =
@@ -261,7 +292,7 @@ export class CMSService {
     for (const hook of optionHooks) {
       await hook({
         schema,
-        data,
+        document,
         db: this._connection,
         context: this.hookContext,
       });
@@ -269,7 +300,7 @@ export class CMSService {
     for (const hook of decorationHooks) {
       await hook.bind(this)({
         schema,
-        data,
+        document,
         db: this._connection,
         context: this.hookContext,
       });
@@ -282,7 +313,7 @@ export class CMSService {
     for (const hook of optionHooks) {
       await hook({
         schema,
-        data: document,
+        document,
         db: this._connection,
         context: this.hookContext,
       });
@@ -290,7 +321,7 @@ export class CMSService {
     for (const hook of decorationHooks) {
       await hook.bind(this)({
         schema,
-        data: document,
+        document,
         db: this._connection,
         context: this.hookContext,
       });

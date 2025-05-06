@@ -3,8 +3,16 @@ import {
   CMSHook,
   BeforeCreate,
   AfterCreate,
+  BeforeUpdate,
+  AfterUpdate,
+  BeforeDelete,
+  AfterDelete,
   AfterCreateHookParams,
   BeforeCreateHookParams,
+  BeforeUpdateHookParams,
+  AfterUpdateHookParams,
+  BeforeDeleteHookParams,
+  AfterDeleteHookParams,
 } from 'nest-mongo-cms';
 
 @Injectable()
@@ -33,5 +41,32 @@ export class HookService {
     console.log(context.body);
     // context.response.send(document)
     return document;
+  }
+
+  @BeforeUpdate('books')
+  beforeUpdateHook(params: BeforeUpdateHookParams) {
+    return {
+      ...params.data,
+      title: 'new title:' + new Date().getTime().toString(),
+    };
+  }
+
+  @AfterUpdate('books')
+  afterUpdateHook({ context, db, ...rest }: AfterUpdateHookParams) {
+    console.log(rest);
+    return {
+      ...rest.currentDocument,
+      dsddsdad: 2313,
+    };
+  }
+
+  @BeforeDelete('books')
+  beforeDeleteHooktest(params: BeforeDeleteHookParams) {
+    console.log('beforeDeleteHooktest', params);
+  }
+
+  @AfterDelete('books')
+  afterDeleteHooktest(params: AfterDeleteHookParams) {
+    console.log('afterDeleteHooktest', params);
   }
 }

@@ -126,7 +126,6 @@ const createCMSController = (path: string = '/cms') => {
     @Delete('/:schema')
     async deleteMany(
       @Param('schema') schema: string,
-      @Query('filter') filter: any,
       @Req() request: Request,
       @Res({ passthrough: true }) response: Response,
       @Session() session: any,
@@ -134,7 +133,7 @@ const createCMSController = (path: string = '/cms') => {
       @Query() query: any,
       @Body() body: any,
     ) {
-      return this.service.deleteMany(schema, filter, {
+      return this.service.deleteMany(schema, body.filter, {
         request,
         response,
         session,
