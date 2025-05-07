@@ -47,7 +47,7 @@ import { VersionControl } from '@nest-mongo-cms/plugins';
       path: '/cms1',
       connectionName: 'library1',
       plugins: [
-        VersionControl({ books: { max: 10, collection: '__books_version' } }),
+        VersionControl({ books: { max: 5, collection: '__books_version' } }),
       ],
     }),
     CMSModule.register({
