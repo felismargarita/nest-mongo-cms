@@ -12,7 +12,7 @@ type VersionControlParams = {
 
 const DEFAULT_MAX_VERSION_COUNT = 50;
 
-const DEFAULT_MAX_VERSION_SCHEMA = (schema: string) => `__${schema}`;
+const DEFAULT_MAX_VERSION_SCHEMA = (schema: string) => `__${schema}_versions`;
 
 const parseConfig = (config: PluginConfigType) => {
   

@@ -7,7 +7,19 @@ import {
   FilterType,
   RecordType,
   HookContext,
+  SchemaHooksType,
+  OperationHookType,
+  AfterCreateHookType,
+  BeforeCreateHookType,
+  BeforeUpdateHookType,
+  AfterUpdateHookType,
+  BeforeDeleteHookType,
+  AfterDeleteHookType,
+  AfterErrorHookType,
+  AfterQueryHookType,
+  CatchHookExceptionDataType,
 } from './types';
+import { HookException } from './exceptions/hook.exception';
 
 @Injectable()
 export class CMSService {
@@ -31,7 +43,24 @@ export class CMSService {
           .sort({ name: 'asc' })
           .exec();
         return await Promise.all(
-          documents.map((doc) => this.executeAfterQueryHooks(schema, doc)),
+          documents.map(async (doc) => {
+            try {
+              return await this.executeAfterQueryHooks(schema, doc);
+            } catch (e) {
+              if (e instanceof HookException) {
+                return await this.executeExceptionHooks(
+                  schema,
+                  'afterQuery',
+                  {
+                    document: doc,
+                  },
+                  e,
+                );
+              } else {
+                throw e;
+              }
+            }
+          }),
         );
       } catch (e) {
         await this.executeAfterErrorHooks(schema, 'find', e);
@@ -114,16 +143,42 @@ export class CMSService {
   };
 
   private async createOne(schema: string, data: RecordType) {
-    data = await this.executeBeforeCreateHooks(schema, data);
+    try {
+      data = await this.executeBeforeCreateHooks(schema, data);
+    } catch (e) {
+      if (e instanceof HookException) {
+        return await this.executeExceptionHooks(
+          schema,
+          'beforeCreate',
+          { data },
+          e,
+        );
+      } else {
+        throw e;
+      }
+    }
     const model = this.connection.model(schema);
     const docs = await model.create([data], { new: true });
     if (docs.length === 1) {
-      const document = await this.executeAfterCreateHooks(
-        schema,
-        docs[0],
-        data,
-      );
-      return document;
+      let document: Document = null;
+      try {
+        document = await this.executeAfterCreateHooks(schema, docs[0], data);
+        return document;
+      } catch (e) {
+        if (e instanceof HookException) {
+          return await this.executeExceptionHooks(
+            schema,
+            'afterCreate',
+            {
+              data,
+              document,
+            },
+            e,
+          );
+        } else {
+          throw e;
+        }
+      }
     }
     throw new Error(
       'document count does not match expectation, should be 1, but actual is: ' +
@@ -136,32 +191,102 @@ export class CMSService {
     data: RecordType,
     originalDoc: Document & { _id: any },
   ) {
-    const hookedData = await this.executeBeforeUpdateHooks(
-      schema,
-      data,
-      { ...originalDoc, ...data },
-      originalDoc,
-    );
+    const targetDoc = { ...originalDoc, ...data };
+    let hookedData = data;
+    try {
+      hookedData = await this.executeBeforeUpdateHooks(
+        schema,
+        data,
+        targetDoc,
+        originalDoc,
+      );
+    } catch (e) {
+      if (e instanceof HookException) {
+        return await this.executeExceptionHooks(
+          schema,
+          'beforeUpdate',
+          {
+            data: hookedData,
+            originalDocument: originalDoc,
+            targetDocument: targetDoc,
+          },
+          e,
+        );
+      } else {
+        throw e;
+      }
+    }
+
     const currentDoc = (await this.connection
       .model(schema)
       .findByIdAndUpdate(originalDoc._id, hookedData, {
         new: true,
       })
       .lean()) as any;
-    return this.executeAfterUpdateHooks(
-      schema,
-      hookedData,
-      originalDoc,
-      currentDoc,
-    );
+
+    let doc = currentDoc;
+    try {
+      doc = await this.executeAfterUpdateHooks(
+        schema,
+        hookedData,
+        originalDoc,
+        currentDoc,
+      );
+      return doc;
+    } catch (e) {
+      if (e instanceof HookException) {
+        return await this.executeExceptionHooks(
+          schema,
+          'afterUpdate',
+          {
+            data: hookedData,
+            originalDocument: originalDoc,
+            currentDocument: doc,
+          },
+          e,
+        );
+      } else {
+        throw e;
+      }
+    }
   }
 
   private async deleteOne(schema: string, document: any) {
-    await this.executeBeforeDeleteHooks(schema, document);
+    try {
+      await this.executeBeforeDeleteHooks(schema, document);
+    } catch (e) {
+      if (e instanceof HookException) {
+        return await this.executeExceptionHooks(
+          schema,
+          'beforeDelete',
+          {
+            document,
+          },
+          e,
+        );
+      } else {
+        throw e;
+      }
+    }
 
     await this.connection.model(schema).deleteOne({ _id: document._id });
 
-    await this.executeAfterDeleteHooks(schema, document);
+    try {
+      await this.executeAfterDeleteHooks(schema, document);
+    } catch (e) {
+      if (e instanceof HookException) {
+        return await this.executeExceptionHooks(
+          schema,
+          'afterDelete',
+          {
+            document,
+          },
+          e,
+        );
+      } else {
+        throw e;
+      }
+    }
 
     return document;
   }
@@ -183,23 +308,20 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterQuery ?? [];
-    for (const hook of optionHooks) {
-      document = await hook({
-        schema,
-        data: document,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      document = await hook.bind(this)({
-        schema,
-        data: document,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: AfterQueryHookType = i ? _hook.bind(this) : _hook;
+        document = await hook({
+          schema,
+          document: document,
+          db: this._connection,
+          rawDb: this.connection,
+          context: this.hookContext,
+        });
+      }
     }
     return document;
   }
@@ -209,23 +331,20 @@ export class CMSService {
       this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.beforeCreate ?? [];
-    for (const hook of optionHooks) {
-      data = await hook({
-        schema,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      data = await hook.bind(this)({
-        schema,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: BeforeCreateHookType = i ? _hook.bind(this) : _hook;
+        data = await hook({
+          schema,
+          data,
+          db: this._connection,
+          rawDb: this.connection,
+          context: this.hookContext,
+        });
+      }
     }
     return data;
   }
@@ -238,25 +357,22 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterCreate ?? [];
-    for (const hook of optionHooks) {
-      document = await hook({
-        schema,
-        document: document,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      document = await hook.bind(this)({
-        schema,
-        document: document,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: AfterCreateHookType = i ? _hook.bind(this) : _hook;
+        document = await hook({
+          schema,
+          document: document,
+          data,
+          db: this._connection,
+          rawDb: this.connection,
+          context: this.hookContext,
+        });
+      }
     }
     return document;
   }
@@ -271,27 +387,22 @@ export class CMSService {
       this.options.schemas?.[schema]?.hooks.beforeUpdate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.beforeUpdate ?? [];
-    for (const hook of optionHooks) {
-      data = await hook({
-        schema,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        originalDocument,
-        targetDocument,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      data = await hook.bind(this)({
-        schema,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        originalDocument,
-        targetDocument,
-        context: this.hookContext,
-      });
+    const hooksGroup = [optionHooks, decorationHooks];
+
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: BeforeUpdateHookType = i ? _hook.bind(this) : _hook;
+        data = await hook({
+          schema,
+          data,
+          db: this._connection,
+          rawDb: this.connection,
+          originalDocument,
+          targetDocument,
+          context: this.hookContext,
+        });
+      }
     }
     return data;
   }
@@ -305,27 +416,22 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterUpdate ?? [];
-    for (const hook of optionHooks) {
-      currentDocument = await hook({
-        schema,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        originalDocument,
-        currentDocument,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      currentDocument = await hook.bind(this)({
-        schema,
-        data,
-        db: this._connection,
-        rawDb: this.connection,
-        originalDocument,
-        currentDocument,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: AfterUpdateHookType = i ? _hook.bind(this) : _hook;
+        currentDocument = await hook({
+          schema,
+          data,
+          db: this._connection,
+          rawDb: this.connection,
+          originalDocument,
+          currentDocument,
+          context: this.hookContext,
+        });
+      }
     }
     return currentDocument;
   }
@@ -335,46 +441,40 @@ export class CMSService {
       this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.beforeDelete ?? [];
-    for (const hook of optionHooks) {
-      await hook({
-        schema,
-        document,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      await hook.bind(this)({
-        schema,
-        document,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: BeforeDeleteHookType = i ? _hook.bind(this) : _hook;
+        await hook({
+          schema,
+          document,
+          db: this._connection,
+          rawDb: this.connection,
+          context: this.hookContext,
+        });
+      }
     }
   }
   async executeAfterDeleteHooks(schema: string, document: Document) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterDelete ?? [];
-    for (const hook of optionHooks) {
-      await hook({
-        schema,
-        document,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
-    }
-    for (const hook of decorationHooks) {
-      await hook.bind(this)({
-        schema,
-        document,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: AfterDeleteHookType = i ? _hook.bind(this) : _hook;
+        await hook({
+          schema,
+          document,
+          db: this._connection,
+          rawDb: this.connection,
+          context: this.hookContext,
+        });
+      }
     }
   }
 
@@ -382,26 +482,91 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterError ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterError ?? [];
-    for (const hook of optionHooks) {
-      await hook({
-        schema,
-        path,
-        error,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+
+    const hooksGroup = [optionHooks, decorationHooks];
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      for (const _hook of hooks) {
+        const hook: AfterErrorHookType = i ? _hook.bind(this) : _hook;
+        await hook({
+          schema,
+          path,
+          error,
+          db: this._connection,
+          rawDb: this.connection,
+          context: this.hookContext,
+        });
+      }
     }
-    for (const hook of decorationHooks) {
-      await hook.bind(this)({
-        schema,
-        path,
-        error,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
+  }
+
+  async executeExceptionHooks<T extends keyof SchemaHooksType>(
+    schema: string,
+    name: T,
+    data: CatchHookExceptionDataType<T>,
+    exception: HookException,
+  ) {
+    const exceptionActions = (() => {
+      let _e: HookException = exception;
+      return {
+        get() {
+          return _e;
+        },
+        clear() {
+          _e = null;
+        },
+        replace(e: HookException) {
+          _e = e;
+        },
+      };
+    })();
+
+    const returnActions = (() => {
+      let returnData: any = null;
+      return {
+        get() {
+          return returnData;
+        },
+        set(_d: any) {
+          returnData = _d;
+        },
+      };
+    })();
+
+    const optionHooks =
+      this.options.schemas?.[schema]?.hooks.catchHookException ?? [];
+    const decorationHooks =
+      this.hooksCollector.schemaHooks[schema]?.catchHookException ?? [];
+
+    const hooksGroup = [optionHooks, decorationHooks];
+
+    for (let i = 0; i < 2; i++) {
+      const hooks = hooksGroup[i];
+      await Promise.allSettled(
+        hooks.map((_exceptionHook) => {
+          const exceptionHook: typeof _exceptionHook = i
+            ? _exceptionHook.bind(this)
+            : _exceptionHook;
+          return exceptionHook({
+            schema,
+            name,
+            data,
+            exceptionActions: exceptionActions,
+            returnActions,
+            exception,
+            db: this._connection,
+            rawDb: this.connection,
+            context: this.hookContext,
+          });
+        }),
+      );
     }
+
+    if (exceptionActions.get()) {
+      throw exceptionActions.get();
+    }
+
+    return returnActions.get();
   }
 
   find(schema: string, options: FindOptionsType, context: HookContext) {
@@ -463,23 +628,18 @@ export class CMSService {
     const optionHook = this.options.schemas?.[schema]?.hooks.operation.find(
       (item) => item.operationType === operationType && item.action === action,
     );
-    if (optionHook) {
-      return optionHook.hook({
-        schema,
-        operationType,
-        action,
-        query,
-        body,
-        db: this._connection,
-        rawDb: this.connection,
-        context: this.hookContext,
-      });
-    }
     const decorationHook = this.options.schemas?.[schema]?.hooks.operation.find(
       (item) => item.operationType === operationType && item.action === action,
     );
+    let hook: OperationHookType = null;
+    if (optionHook) {
+      hook = optionHook.hook;
+    }
     if (decorationHook) {
-      return decorationHook.hook.bind(this)({
+      hook = decorationHook.hook.bind(this);
+    }
+    if (hook) {
+      return hook({
         schema,
         operationType,
         action,
@@ -490,6 +650,7 @@ export class CMSService {
         context: this.hookContext,
       });
     }
+
     throw new NotFoundException(
       `missing resource error: schema: ${schema}, operationType: ${operationType}, action: ${action}`,
     );

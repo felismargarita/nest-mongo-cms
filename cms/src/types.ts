@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Connection } from 'mongoose';
+import { HookException } from './exceptions/hook.exception';
 
 type DBType = {
   find: (schema: string, options: FindOptionsType) => Promise<any>;
@@ -24,14 +25,6 @@ export type HookContext = {
   body: any;
 };
 
-export type HookType = (params: {
-  schema: string;
-  data: any;
-  db: DBType;
-  rawDb: Connection;
-  context: HookContext;
-}) => Promise<any> | any;
-
 export type HookTypeNoReturn = (params: {
   schema: string;
   data: any;
@@ -40,34 +33,48 @@ export type HookTypeNoReturn = (params: {
   context: HookContext;
 }) => Promise<void> | void;
 
-export type AfterQueryHookType = HookType;
-export type BeforeCreateHookType = HookType;
-export type AfterCreateHookType = (params: {
+export type AfterQueryHookType = (params: {
+  schema: string;
+  document: Document;
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => Promise<any> | any;
+
+export type BeforeCreateHookType = (params: {
   schema: string;
   data: RecordType;
   db: DBType;
   rawDb: Connection;
+  context: HookContext;
+}) => Promise<any> | any;
+
+export type AfterCreateHookType = (params: {
+  schema: string;
+  data: RecordType;
   document: Document;
+  db: DBType;
+  rawDb: Connection;
   context: HookContext;
 }) => Promise<Document> | Document;
 
 export type BeforeUpdateHookType = (params: {
   schema: string;
   data: RecordType;
-  db: DBType;
-  rawDb: Connection;
   originalDocument: Document;
   targetDocument: Document;
+  db: DBType;
+  rawDb: Connection;
   context: HookContext;
 }) => Promise<Document> | Document;
 
 export type AfterUpdateHookType = (params: {
   schema: string;
   data: RecordType;
-  db: DBType;
-  rawDb: Connection;
   originalDocument: Document;
   currentDocument: Document;
+  db: DBType;
+  rawDb: Connection;
   context: HookContext;
 }) => Promise<Document> | Document;
 
@@ -107,6 +114,49 @@ export type OperationHookType = (params: {
   context: HookContext;
 }) => any;
 
+export type CatchHookExceptionDataType<T extends keyof SchemaHooksType> =
+  T extends 'afterQuery'
+    ? { document: Document }
+    : T extends 'beforeCreate'
+      ? { data: RecordType }
+      : T extends 'afterCreate'
+        ? { data: RecordType; document: Document }
+        : T extends 'beforeUpdate'
+          ? {
+              data: RecordType;
+              originalDocument: Document;
+              targetDocument: Document;
+            }
+          : T extends 'afterUpdate'
+            ? {
+                data: RecordType;
+                originalDocument: Document;
+                currentDocument: Document;
+              }
+            : T extends 'beforeDelete'
+              ? { document: Document }
+              : T extends 'afterDelete'
+                ? { document: Document }
+                : never;
+export type CatchHookExceptionType = <T extends keyof SchemaHooksType>(params: {
+  schema: string;
+  name: T;
+  data: CatchHookExceptionDataType<T>;
+  exception: HookException;
+  exceptionActions: {
+    get: () => HookException;
+    clear: () => void;
+    replace: (e: HookException) => void;
+  };
+  returnActions: {
+    get: () => any;
+    set: (_d: any) => void;
+  };
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => any;
+
 export type SchemaHooksType = {
   afterQuery?: AfterQueryHookType[];
   beforeCreate?: BeforeCreateHookType[];
@@ -116,6 +166,7 @@ export type SchemaHooksType = {
   beforeDelete?: BeforeDeleteHookType[];
   afterDelete?: AfterDeleteHookType[];
   afterError?: AfterErrorHookType[];
+  catchHookException?: CatchHookExceptionType[];
   operation?: Array<{
     operationType: string;
     action: string;

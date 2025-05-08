@@ -40,7 +40,7 @@ export class HookService {
     context,
   }: AfterCreateHookParams) {
     // console.log(data, document);
-    console.log(context.body);
+    console.log('AfterCreate', context.body);
     // context.response.send(document)
     return document;
   }

@@ -7,7 +7,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ChapterSchema } from './chapter.schema';
 import { HookService } from './hook.service';
 import { Hook2Service } from './hook2.service';
-import { VersionControl } from '@nest-mongo-cms/plugins';
+import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
 
 @Module({
   imports: [
@@ -48,6 +48,7 @@ import { VersionControl } from '@nest-mongo-cms/plugins';
       connectionName: 'library1',
       plugins: [
         VersionControl({ books: { max: 5, collection: '__books_version' } }),
+        ContentReview({ books: { collection: '__books_review' } }),
       ],
     }),
     CMSModule.register({
