@@ -13,7 +13,12 @@ class ReviewInteruptException extends HookException {
     Object.setPrototypeOf(this, ReviewInteruptException.prototype);
   }
 }
-
+/**
+ * This plugin is recommended to be used when the target schema is independent and no other hooks are injected,
+ * if there existing other plugins or hooks for this schema, the review data logic could not be stable / robust enough
+ * @param schemas 
+ * @returns 
+ */
 const ContentReview = (schemas: ContentReviewParams) => {
   const inject = (options: OptionsType) => {
     const schemaKeys = Object.keys(schemas);
