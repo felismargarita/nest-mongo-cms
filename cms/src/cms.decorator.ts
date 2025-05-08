@@ -42,6 +42,10 @@ const CMS_HOOK_AFTER_ERROR_META = Symbol('afterError');
 const AfterError = (schema?: string) =>
   SetMetadata(CMS_HOOK_AFTER_ERROR_META, schema ?? SCHEMA_DEFAULT);
 
+const CMS_HOOK_OPERATION_META = Symbol('operation');
+const Operation = (schema?: string) =>
+  SetMetadata(CMS_HOOK_OPERATION_META, schema ?? SCHEMA_DEFAULT);
+
 const methodHookMetas = [
   CMS_HOOK_AFTER_QUERY_META,
   CMS_HOOK_BEFORE_CREATE_META,
@@ -51,6 +55,7 @@ const methodHookMetas = [
   CMS_HOOK_BEFORE_DELETE_META,
   CMS_HOOK_AFTER_DELETE_META,
   CMS_HOOK_AFTER_ERROR_META,
+  CMS_HOOK_OPERATION_META,
 ];
 
 export {
@@ -75,4 +80,6 @@ export {
   methodHookMetas,
   CMS_HOOK_AFTER_ERROR_META,
   AfterError,
+  CMS_HOOK_OPERATION_META,
+  Operation,
 };

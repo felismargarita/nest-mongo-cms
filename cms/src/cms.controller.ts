@@ -170,6 +170,17 @@ const createCMSController = (path: string = '/cms') => {
         body,
       });
     }
+
+    @Post('/operation/:schema/:operationType/:action')
+    async operate(
+      @Param('schema') schema: string,
+      @Param('operationType') operationType: string,
+      @Param('action') action: string,
+      @Query() query: any,
+      @Body() body: any,
+    ) {
+      return this.service.operate(schema, operationType, action, query, body);
+    }
   }
 
   return CMSController;

@@ -96,6 +96,17 @@ export type AfterErrorHookType = (params: {
   context: HookContext;
 }) => Promise<void> | void;
 
+export type OperationHookType = (params: {
+  schema: string;
+  operationType: string;
+  action: string;
+  query: any;
+  body: any;
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => any;
+
 export type SchemaHooksType = {
   afterQuery?: AfterQueryHookType[];
   beforeCreate?: BeforeCreateHookType[];
@@ -105,6 +116,11 @@ export type SchemaHooksType = {
   beforeDelete?: BeforeDeleteHookType[];
   afterDelete?: AfterDeleteHookType[];
   afterError?: AfterErrorHookType[];
+  operation?: Array<{
+    operationType: string;
+    action: string;
+    hook: OperationHookType;
+  }>;
 };
 
 //export hook params
@@ -120,6 +136,13 @@ export type AfterDeleteHookParams = ExtractHookParams<'afterDelete'>;
 export type BeforeDeleteHookParams = ExtractHookParams<'beforeDelete'>;
 export type AfterErrorHookParams = ExtractHookParams<'afterError'>;
 
+export type PluginType = {
+  name: string;
+  depends?: string[];
+  priority?: number;
+  inject: (options: OptionsType) => OptionsType;
+};
+
 export type OptionsType = {
   path?: string;
   connectionName?: string;
@@ -129,7 +152,7 @@ export type OptionsType = {
       hooks?: SchemaHooksType;
     };
   };
-  plugins?: Array<(options: OptionsType) => OptionsType>;
+  plugins?: Array<PluginType>;
 };
 
 export type FindOptionsType = {

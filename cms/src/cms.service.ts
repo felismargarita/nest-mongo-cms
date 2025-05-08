@@ -1,5 +1,5 @@
 import { HooksCollector } from './hooks-collector.service';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Connection } from 'mongoose';
 import {
   OptionsType,
@@ -451,5 +451,47 @@ export class CMSService {
   deleteById(schema: string, id: string, context: HookContext) {
     this.hookContext = context;
     return this._connection.deleteById(schema, id);
+  }
+
+  async operate(
+    schema: string,
+    operationType: string,
+    action: string,
+    query: any,
+    body: any,
+  ) {
+    const optionHook = this.options.schemas?.[schema]?.hooks.operation.find(
+      (item) => item.operationType === operationType && item.action === action,
+    );
+    if (optionHook) {
+      return optionHook.hook({
+        schema,
+        operationType,
+        action,
+        query,
+        body,
+        db: this._connection,
+        rawDb: this.connection,
+        context: this.hookContext,
+      });
+    }
+    const decorationHook = this.options.schemas?.[schema]?.hooks.operation.find(
+      (item) => item.operationType === operationType && item.action === action,
+    );
+    if (decorationHook) {
+      return decorationHook.hook.bind(this)({
+        schema,
+        operationType,
+        action,
+        query,
+        body,
+        db: this._connection,
+        rawDb: this.connection,
+        context: this.hookContext,
+      });
+    }
+    throw new NotFoundException(
+      `missing resource error: schema: ${schema}, operationType: ${operationType}, action: ${action}`,
+    );
   }
 }

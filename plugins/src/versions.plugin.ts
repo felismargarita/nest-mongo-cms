@@ -1,4 +1,4 @@
-import { OptionsType } from 'nest-mongo-cms';
+import { OptionsType, PluginType } from 'nest-mongo-cms';
 
 
 type PluginConfigType = {
@@ -46,9 +46,9 @@ const parseConfig = (config: PluginConfigType) => {
   }
 }
 
-const VersionControl = (_pluginParams: VersionControlParams) => {
-  return (options: OptionsType) => {
+const VersionControl = (_pluginParams: VersionControlParams): PluginType=> {
 
+  const inject = (options: OptionsType) => {
     const { schemas: originalSchemas = {}, ...rest } = options;
 
     for (const [schemaKey, _pluginConfigs] of Object.entries(_pluginParams ?? {})) {
@@ -110,7 +110,7 @@ const VersionControl = (_pluginParams: VersionControlParams) => {
         .sort({ operationAt: 'desc' })
         .skip(max)
         .toArray();
-        
+
         for (const obsoleteVersion of obsoleteVersions) {
           await collection.deleteOne({ _id: obsoleteVersion._id })
         }
@@ -140,16 +140,53 @@ const VersionControl = (_pluginParams: VersionControlParams) => {
 
       // ################################################
 
-      
+
+      /**
+       * inject opearations
+       * 
+       */
+      const opearation = hooks.operation ?? []
+      opearation.unshift({
+        operationType: 'versions',
+        action: 'list',
+        hook: async (params) => {
+          const {
+            filter,
+            sort,
+            skip = 0,
+            limit = 10
+          } = params.body
+          return params.rawDb
+          .getClient()
+          .db()
+          .collection(versionCollection)
+          .find(filter)
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .toArray()
+        }
+      })
+      hooks.operation = opearation;
+      // ################################################
+
+
       schemaOptions.hooks = hooks;
       originalSchemas[schemaKey] = schemaOptions;
-
+  
     }
     return {
       ...rest,
       schemas: originalSchemas
     }
   }
+
+  return {
+    name: 'VersionControl',
+    inject,
+    priority: 0,
+    depends: [],
+  }
 }
 
-export { VersionControl };
+export { VersionControl }
