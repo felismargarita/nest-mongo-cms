@@ -51,10 +51,6 @@ import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
         ContentReview({ books: { collection: '__books_review' } }),
       ],
     }),
-    CMSModule.register({
-      path: '/cms2',
-      connectionName: 'library2',
-    }),
   ],
   controllers: [AppController],
   providers: [AppService, HookService, Hook2Service],

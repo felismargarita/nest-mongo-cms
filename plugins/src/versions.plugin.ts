@@ -155,7 +155,7 @@ const VersionControl = (_pluginParams: VersionControlParams): PluginType=> {
             sort,
             skip = 0,
             limit = 10
-          } = params.body
+          } = params.context.body
           return params.rawDb
           .getClient()
           .db()

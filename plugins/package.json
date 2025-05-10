@@ -9,6 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
+    "@nestjs/common": "^10.0.0",
     "nest-mongo-cms": "workspace:*",
     "prettier": "^3.0.0",
     "source-map-support": "^0.5.21",

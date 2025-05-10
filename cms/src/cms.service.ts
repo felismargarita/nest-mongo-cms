@@ -20,6 +20,7 @@ import {
   CatchHookExceptionDataType,
 } from './types';
 import { HookException } from './exceptions/hook.exception';
+import { createPureValue } from './utils/pureValue';
 
 @Injectable()
 export class CMSService {
@@ -44,8 +45,13 @@ export class CMSService {
           .exec();
         return await Promise.all(
           documents.map(async (doc) => {
+            const pureDocument = createPureValue(doc);
             try {
-              return await this.executeAfterQueryHooks(schema, doc);
+              return await this.executeAfterQueryHooks(
+                schema,
+                doc,
+                pureDocument,
+              );
             } catch (e) {
               if (e instanceof HookException) {
                 return await this.executeExceptionHooks(
@@ -53,6 +59,7 @@ export class CMSService {
                   'afterQuery',
                   {
                     document: doc,
+                    pureDocument,
                   },
                   e,
                 );
@@ -71,7 +78,28 @@ export class CMSService {
       try {
         const model = this.connection.model(schema);
         const document = await model.findById(id).exec();
-        return await this.executeAfterQueryHooks(schema, document);
+        const pureDocument = createPureValue(document);
+        try {
+          return await this.executeAfterQueryHooks(
+            schema,
+            document,
+            pureDocument,
+          );
+        } catch (e) {
+          if (e instanceof HookException) {
+            return await this.executeExceptionHooks(
+              schema,
+              'afterQuery',
+              {
+                document,
+                pureDocument,
+              },
+              e,
+            );
+          } else {
+            throw e;
+          }
+        }
       } catch (e) {
         await this.executeAfterErrorHooks(schema, 'findOne', e);
         throw e;
@@ -143,14 +171,15 @@ export class CMSService {
   };
 
   private async createOne(schema: string, data: RecordType) {
+    const pureData = createPureValue(data);
     try {
-      data = await this.executeBeforeCreateHooks(schema, data);
+      data = await this.executeBeforeCreateHooks(schema, data, pureData);
     } catch (e) {
       if (e instanceof HookException) {
         return await this.executeExceptionHooks(
           schema,
           'beforeCreate',
-          { data },
+          { data, pureData },
           e,
         );
       } else {
@@ -160,9 +189,17 @@ export class CMSService {
     const model = this.connection.model(schema);
     const docs = await model.create([data], { new: true });
     if (docs.length === 1) {
-      let document: Document = null;
+      let document: Document = docs[0];
+      const pureData = createPureValue(data);
+      const pureDocument = createPureValue(document);
       try {
-        document = await this.executeAfterCreateHooks(schema, docs[0], data);
+        document = await this.executeAfterCreateHooks(
+          schema,
+          docs[0],
+          data,
+          pureData,
+          pureDocument,
+        );
         return document;
       } catch (e) {
         if (e instanceof HookException) {
@@ -171,7 +208,9 @@ export class CMSService {
             'afterCreate',
             {
               data,
+              pureData,
               document,
+              pureDocument,
             },
             e,
           );
@@ -191,12 +230,14 @@ export class CMSService {
     data: RecordType,
     originalDoc: Document & { _id: any },
   ) {
+    const pureData = createPureValue(data);
     const targetDoc = { ...originalDoc, ...data };
     let hookedData = data;
     try {
       hookedData = await this.executeBeforeUpdateHooks(
         schema,
         data,
+        pureData,
         targetDoc,
         originalDoc,
       );
@@ -207,6 +248,7 @@ export class CMSService {
           'beforeUpdate',
           {
             data: hookedData,
+            pureData,
             originalDocument: originalDoc,
             targetDocument: targetDoc,
           },
@@ -225,12 +267,15 @@ export class CMSService {
       .lean()) as any;
 
     let doc = currentDoc;
+    const pureCurrentDocument = createPureValue(currentDoc);
     try {
       doc = await this.executeAfterUpdateHooks(
         schema,
         hookedData,
+        pureData,
         originalDoc,
         currentDoc,
+        pureCurrentDocument,
       );
       return doc;
     } catch (e) {
@@ -240,8 +285,10 @@ export class CMSService {
           'afterUpdate',
           {
             data: hookedData,
+            pureData,
             originalDocument: originalDoc,
             currentDocument: doc,
+            pureCurrentDocument,
           },
           e,
         );
@@ -252,8 +299,9 @@ export class CMSService {
   }
 
   private async deleteOne(schema: string, document: any) {
+    const pureDocument = createPureValue(document);
     try {
-      await this.executeBeforeDeleteHooks(schema, document);
+      await this.executeBeforeDeleteHooks(schema, document, pureDocument);
     } catch (e) {
       if (e instanceof HookException) {
         return await this.executeExceptionHooks(
@@ -261,6 +309,7 @@ export class CMSService {
           'beforeDelete',
           {
             document,
+            pureDocument,
           },
           e,
         );
@@ -270,9 +319,8 @@ export class CMSService {
     }
 
     await this.connection.model(schema).deleteOne({ _id: document._id });
-
     try {
-      await this.executeAfterDeleteHooks(schema, document);
+      await this.executeAfterDeleteHooks(schema, document, pureDocument);
     } catch (e) {
       if (e instanceof HookException) {
         return await this.executeExceptionHooks(
@@ -280,6 +328,7 @@ export class CMSService {
           'afterDelete',
           {
             document,
+            pureDocument,
           },
           e,
         );
@@ -304,7 +353,11 @@ export class CMSService {
     }
   }
 
-  async executeAfterQueryHooks(schema: string, document: Document) {
+  async executeAfterQueryHooks(
+    schema: string,
+    document: Document,
+    pureDocument: Readonly<Document>,
+  ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterQuery ?? [];
@@ -316,6 +369,7 @@ export class CMSService {
         const hook: AfterQueryHookType = i ? _hook.bind(this) : _hook;
         document = await hook({
           schema,
+          pureDocument: pureDocument,
           document: document,
           db: this._connection,
           rawDb: this.connection,
@@ -326,7 +380,11 @@ export class CMSService {
     return document;
   }
 
-  async executeBeforeCreateHooks(schema: string, data: RecordType) {
+  async executeBeforeCreateHooks(
+    schema: string,
+    data: RecordType,
+    pureData: Readonly<RecordType>,
+  ) {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
     const decorationHooks =
@@ -339,6 +397,7 @@ export class CMSService {
         const hook: BeforeCreateHookType = i ? _hook.bind(this) : _hook;
         data = await hook({
           schema,
+          pureData,
           data,
           db: this._connection,
           rawDb: this.connection,
@@ -353,20 +412,23 @@ export class CMSService {
     schema: string,
     document: Document,
     data: RecordType,
+    pureData: Readonly<RecordType>,
+    pureDocument: Readonly<Document>,
   ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterCreate ?? [];
 
     const hooksGroup = [optionHooks, decorationHooks];
-
     for (let i = 0; i < 2; i++) {
       const hooks = hooksGroup[i];
       for (const _hook of hooks) {
         const hook: AfterCreateHookType = i ? _hook.bind(this) : _hook;
         document = await hook({
           schema,
+          pureData,
           document: document,
+          pureDocument,
           data,
           db: this._connection,
           rawDb: this.connection,
@@ -380,6 +442,7 @@ export class CMSService {
   async executeBeforeUpdateHooks(
     schema: string,
     data: RecordType,
+    pureData: Readonly<RecordType>,
     targetDocument: Document,
     originalDocument: Document,
   ) {
@@ -396,6 +459,7 @@ export class CMSService {
         data = await hook({
           schema,
           data,
+          pureData,
           db: this._connection,
           rawDb: this.connection,
           originalDocument,
@@ -410,13 +474,14 @@ export class CMSService {
   async executeAfterUpdateHooks(
     schema: string,
     data: RecordType,
+    pureData: Readonly<RecordType>,
     originalDocument: Document,
     currentDocument: Document,
+    pureCurrentDocument: Readonly<Document>,
   ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterUpdate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterUpdate ?? [];
-
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
       const hooks = hooksGroup[i];
@@ -425,6 +490,8 @@ export class CMSService {
         currentDocument = await hook({
           schema,
           data,
+          pureData,
+          pureCurrentDocument,
           db: this._connection,
           rawDb: this.connection,
           originalDocument,
@@ -436,7 +503,11 @@ export class CMSService {
     return currentDocument;
   }
 
-  async executeBeforeDeleteHooks(schema: string, document: Document) {
+  async executeBeforeDeleteHooks(
+    schema: string,
+    document: Document,
+    pureDocument: Readonly<Document>,
+  ) {
     const optionHooks =
       this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
     const decorationHooks =
@@ -450,6 +521,7 @@ export class CMSService {
         await hook({
           schema,
           document,
+          pureDocument,
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
@@ -457,7 +529,11 @@ export class CMSService {
       }
     }
   }
-  async executeAfterDeleteHooks(schema: string, document: Document) {
+  async executeAfterDeleteHooks(
+    schema: string,
+    document: Document,
+    pureDocument: Readonly<Document>,
+  ) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterDelete ?? [];
@@ -470,6 +546,7 @@ export class CMSService {
         await hook({
           schema,
           document,
+          pureDocument,
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
@@ -622,8 +699,7 @@ export class CMSService {
     schema: string,
     operationType: string,
     action: string,
-    query: any,
-    body: any,
+    context: HookContext,
   ) {
     const optionHook = this.options.schemas?.[schema]?.hooks.operation.find(
       (item) => item.operationType === operationType && item.action === action,
@@ -638,13 +714,12 @@ export class CMSService {
     if (decorationHook) {
       hook = decorationHook.hook.bind(this);
     }
+    this.hookContext = context;
     if (hook) {
       return hook({
         schema,
         operationType,
         action,
-        query,
-        body,
         db: this._connection,
         rawDb: this.connection,
         context: this.hookContext,

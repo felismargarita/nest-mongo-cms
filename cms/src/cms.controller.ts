@@ -176,10 +176,21 @@ const createCMSController = (path: string = '/cms') => {
       @Param('schema') schema: string,
       @Param('operationType') operationType: string,
       @Param('action') action: string,
+      @Param() params: any,
       @Query() query: any,
       @Body() body: any,
+      @Req() request: Request,
+      @Res({ passthrough: true }) response: Response,
+      @Session() session: any,
     ) {
-      return this.service.operate(schema, operationType, action, query, body);
+      return this.service.operate(schema, operationType, action, {
+        query,
+        body,
+        params,
+        request,
+        session,
+        response,
+      });
     }
   }
 

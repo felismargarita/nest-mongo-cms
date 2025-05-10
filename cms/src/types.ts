@@ -16,6 +16,8 @@ type DBType = {
   deleteById: (schema: string, id: string) => Promise<any>;
 };
 
+type DocumentLike = Document & RecordType;
+
 export type HookContext = {
   request: Request;
   response: Response;
@@ -23,6 +25,7 @@ export type HookContext = {
   params: any;
   query: any;
   body: any;
+  [prop: string]: any;
 };
 
 export type HookTypeNoReturn = (params: {
@@ -35,64 +38,73 @@ export type HookTypeNoReturn = (params: {
 
 export type AfterQueryHookType = (params: {
   schema: string;
-  document: Document;
+  pureDocument: Readonly<Document>;
+  document: DocumentLike;
   db: DBType;
   rawDb: Connection;
   context: HookContext;
-}) => Promise<any> | any;
+}) => Promise<DocumentLike> | DocumentLike;
 
 export type BeforeCreateHookType = (params: {
   schema: string;
+  pureData: Readonly<RecordType>;
   data: RecordType;
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => Promise<RecordType> | RecordType;
+
+export type AfterCreateHookType = (params: {
+  schema: string;
+  pureData: Readonly<RecordType>;
+  data: RecordType;
+  pureDocument: Readonly<Document>;
+  document: DocumentLike;
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => Promise<DocumentLike> | DocumentLike;
+
+export type BeforeUpdateHookType = (params: {
+  schema: string;
+  pureData: Readonly<RecordType>;
+  data: RecordType;
+  originalDocument: Readonly<Document>;
+  targetDocument: DocumentLike;
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => Promise<DocumentLike> | DocumentLike;
+
+export type AfterUpdateHookType = (params: {
+  schema: string;
+  pureData: Readonly<RecordType>;
+  data: RecordType;
+  originalDocument: Document;
+  pureCurrentDocument: Readonly<Document>;
+  currentDocument: DocumentLike;
+  db: DBType;
+  rawDb: Connection;
+  context: HookContext;
+}) => Promise<DocumentLike> | DocumentLike;
+
+export type BeforeDeleteHookType = (params: {
+  schema: string;
+  pureDocument: Readonly<Document>;
+  document: DocumentLike;
   db: DBType;
   rawDb: Connection;
   context: HookContext;
 }) => Promise<any> | any;
 
-export type AfterCreateHookType = (params: {
-  schema: string;
-  data: RecordType;
-  document: Document;
-  db: DBType;
-  rawDb: Connection;
-  context: HookContext;
-}) => Promise<Document> | Document;
-
-export type BeforeUpdateHookType = (params: {
-  schema: string;
-  data: RecordType;
-  originalDocument: Document;
-  targetDocument: Document;
-  db: DBType;
-  rawDb: Connection;
-  context: HookContext;
-}) => Promise<Document> | Document;
-
-export type AfterUpdateHookType = (params: {
-  schema: string;
-  data: RecordType;
-  originalDocument: Document;
-  currentDocument: Document;
-  db: DBType;
-  rawDb: Connection;
-  context: HookContext;
-}) => Promise<Document> | Document;
-
-export type BeforeDeleteHookType = (params: {
-  schema: string;
-  document: Document;
-  db: DBType;
-  rawDb: Connection;
-  context: HookContext;
-}) => Promise<void> | void;
-
 export type AfterDeleteHookType = (params: {
   schema: string;
-  document: Document;
+  pureDocument: Readonly<Document>;
+  document: DocumentLike;
   db: DBType;
   rawDb: Connection;
   context: HookContext;
-}) => Promise<void> | void;
+}) => Promise<any> | any;
 
 export type AfterErrorHookType = (params: {
   schema: string;
@@ -107,8 +119,6 @@ export type OperationHookType = (params: {
   schema: string;
   operationType: string;
   action: string;
-  query: any;
-  body: any;
   db: DBType;
   rawDb: Connection;
   context: HookContext;
@@ -116,28 +126,37 @@ export type OperationHookType = (params: {
 
 export type CatchHookExceptionDataType<T extends keyof SchemaHooksType> =
   T extends 'afterQuery'
-    ? { document: Document }
+    ? { document: DocumentLike; pureDocument: Readonly<Document> }
     : T extends 'beforeCreate'
-      ? { data: RecordType }
+      ? { data: RecordType; pureData: Readonly<RecordType> }
       : T extends 'afterCreate'
-        ? { data: RecordType; document: Document }
+        ? {
+            data: RecordType;
+            document: DocumentLike;
+            pureData: Readonly<RecordType>;
+            pureDocument: Document;
+          }
         : T extends 'beforeUpdate'
           ? {
               data: RecordType;
-              originalDocument: Document;
+              pureData: Readonly<RecordType>;
+              originalDocument: Readonly<Document>;
               targetDocument: Document;
             }
           : T extends 'afterUpdate'
             ? {
                 data: RecordType;
+                pureData: Readonly<RecordType>;
                 originalDocument: Document;
-                currentDocument: Document;
+                pureCurrentDocument: Readonly<Document>;
+                currentDocument: DocumentLike;
               }
             : T extends 'beforeDelete'
-              ? { document: Document }
+              ? { document: DocumentLike; pureDocument: Readonly<Document> }
               : T extends 'afterDelete'
-                ? { document: Document }
+                ? { document: DocumentLike; pureDocument: Readonly<Document> }
                 : never;
+
 export type CatchHookExceptionType = <T extends keyof SchemaHooksType>(params: {
   schema: string;
   name: T;
