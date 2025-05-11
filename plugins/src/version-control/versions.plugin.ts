@@ -8,7 +8,7 @@ type PluginConfigType = {
 } | boolean
 
 
-const DEFAULT_MAX_VERSION_COUNT = 50;
+const DEFAULT_MAX_VERSION_COUNT = Number.MAX_VALUE;
 
 const DEFAULT_MAX_VERSION_SCHEMA = (schema: string) => `__${schema}_versions`;
 
@@ -59,14 +59,14 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
     const afterCreateHooks = hooks.afterCreate ?? []
 
     afterCreateHooks.unshift(async (params) => {
-      const { document, rawDb } = params as any;
+      const { pureDocument, document, rawDb } = params;
       const client = rawDb.getClient();
       
       await client.db().collection(versionCollection).insertOne({
-        pid: document._id,
+        pid: pureDocument._id,
         operationAt: new Date(),
         operationType: 'create',
-        data: document,
+        data: pureDocument,
       });
       return document;
     });
@@ -77,7 +77,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
      */
     const afterUpdateHooks = hooks.afterUpdate ?? []
     afterUpdateHooks.unshift(async (params) => {
-      const { currentDocument, rawDb } = params
+      const { pureCurrentDocument, currentDocument , rawDb } = params
 
       const collection = rawDb.getClient().db().collection(versionCollection);
       
@@ -85,10 +85,10 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
        * insert the current version
        */
       await collection.insertOne({
-        pid: currentDocument._id,
+        pid: pureCurrentDocument._id,
         operationAt: new Date(),
         operationType: 'update',
-        data: currentDocument,
+        data: pureCurrentDocument,
       });
 
       /**
@@ -119,13 +119,13 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
     const afterDeleteHooks = hooks.afterDelete ?? []
 
     afterDeleteHooks.unshift(async (params) => {
-      const { document, rawDb } = params
+      const { document, pureDocument, rawDb } = params
       const client = rawDb.getClient();
       await client.db().collection(versionCollection).insertOne({
-        pid: document._id,
+        pid: pureDocument._id,
         operationAt: new Date(),
         operationType: 'delete',
-        data: document,
+        data: pureDocument,
       });
     });
     hooks.afterDelete = afterDeleteHooks
@@ -134,11 +134,11 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
 
 
     /**
-     * inject opearations
+     * inject operation
      * 
      */
-    const opearation = hooks.operation ?? []
-    opearation.unshift({
+    const operation = hooks.operation ?? []
+    operation.unshift({
       operationType: 'versions',
       action: 'list',
       hook: async (params) => {
@@ -159,7 +159,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
         .toArray()
       }
     })
-    hooks.operation = opearation;
+    hooks.operation = operation;
     // ################################################
 
 
