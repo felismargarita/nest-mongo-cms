@@ -2,7 +2,7 @@ import { SchemaConfig, CatchHookExceptionDataType } from 'nest-mongo-cms';
 import { v4 as uuid } from 'uuid';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ReviewInteruptException } from './review-interrupt.exception';
-
+import { buildFilter } from '../utils/buildFilter';
 
 
 
@@ -153,6 +153,11 @@ const ContentReview = (config: ContentReviewParams) => {
       }
     });
 
+    /**
+     * filter
+     * 
+     * field: value | { eq, contains, gt, gte, lt, lte, between }
+     */
     operation.unshift({
       operationType: 'review',
       action: 'list',
@@ -165,9 +170,15 @@ const ContentReview = (config: ContentReviewParams) => {
           limit = 10
         } = params.context.body ?? {};
         //TODO validate the params
-        return reviewCollection.find(filter).sort(sort).skip(skip).limit(limit).toArray()
+        return reviewCollection.find(buildFilter(filter))
+        .sort(sort)
+        .skip(skip)
+        .limit(Math.min(1000, limit))
+        .toArray()
       }
     })
+
+  
 
     hooks.operation = operation;
     //######################################################

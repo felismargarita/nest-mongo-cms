@@ -1,4 +1,5 @@
 import { SchemaConfig, PluginType } from 'nest-mongo-cms';
+import { buildFilter } from '../utils/buildFilter';
 
 
 type PluginConfigType = {
@@ -84,7 +85,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
        * insert the current version
        */
       await collection.insertOne({
-        pid: (currentDocument as any)._id,
+        pid: currentDocument._id,
         operationAt: new Date(),
         operationType: 'update',
         data: currentDocument,
@@ -95,7 +96,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
        */
       const obsoleteVersions = await collection
       .find({
-        pid: (currentDocument as any)._id,
+        pid: currentDocument._id,
         operationType: 'update'
       })
       .sort({ operationAt: 'desc' })
@@ -121,7 +122,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
       const { document, rawDb } = params
       const client = rawDb.getClient();
       await client.db().collection(versionCollection).insertOne({
-        pid: (document as any)._id,
+        pid: document._id,
         operationAt: new Date(),
         operationType: 'delete',
         data: document,
@@ -142,7 +143,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
       action: 'list',
       hook: async (params) => {
         const {
-          filter,
+          filter = {},
           sort,
           skip = 0,
           limit = 10
@@ -151,7 +152,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
         .getClient()
         .db()
         .collection(versionCollection)
-        .find(filter)
+        .find(buildFilter(filter))
         .sort(sort)
         .skip(skip)
         .limit(limit)

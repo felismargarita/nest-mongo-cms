@@ -23,7 +23,7 @@ export class HookService {
   constructor() {}
 
   @BeforeCreate('books')
-  customize_book_id({ data, context }: BeforeCreateHookParams) {
+  customize_book_id({ data, context, pureData }: BeforeCreateHookParams) {
     // console.log(data);
     const _id = `book_${new Date().getTime().toString()}`;
     return {
