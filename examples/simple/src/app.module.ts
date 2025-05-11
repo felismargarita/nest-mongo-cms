@@ -46,10 +46,14 @@ import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
     CMSModule.register({
       path: '/cms1',
       connectionName: 'library1',
-      plugins: [
-        VersionControl({ books: { max: 5, collection: '__books_version' } }),
-        ContentReview({ books: { collection: '__books_review' } }),
-      ],
+      schemas: {
+        books: {
+          plugins: [
+            VersionControl({ max: 5, collection: '__book_versions' }),
+            ContentReview({ collection: '__books_review' }),
+          ]
+        }
+      }
     }),
   ],
   controllers: [AppController],

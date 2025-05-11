@@ -1,6 +1,6 @@
 import { HooksCollector } from './hooks-collector.service';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Connection } from 'mongoose';
+import { Connection, Document } from 'mongoose';
 import {
   OptionsType,
   FindOptionsType,
@@ -18,6 +18,7 @@ import {
   AfterErrorHookType,
   AfterQueryHookType,
   CatchHookExceptionDataType,
+  DocumentLike,
 } from './types';
 import { HookException } from './exceptions/hook.exception';
 import { createPureValue } from './utils/pureValue';
@@ -228,10 +229,10 @@ export class CMSService {
   private async updateOne(
     schema: string,
     data: RecordType,
-    originalDoc: Document & { _id: any },
+    originalDoc: Document,
   ) {
     const pureData = createPureValue(data);
-    const targetDoc = { ...originalDoc, ...data };
+    const targetDoc = { ...originalDoc, ...data } as Document;
     let hookedData = data;
     try {
       hookedData = await this.executeBeforeUpdateHooks(
@@ -410,7 +411,7 @@ export class CMSService {
 
   async executeAfterCreateHooks(
     schema: string,
-    document: Document,
+    document: DocumentLike,
     data: RecordType,
     pureData: Readonly<RecordType>,
     pureDocument: Readonly<Document>,

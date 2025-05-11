@@ -1,22 +1,29 @@
 import { Request, Response } from 'express';
-import { Connection } from 'mongoose';
+import { Connection, Document } from 'mongoose';
 import { HookException } from './exceptions/hook.exception';
 
 type DBType = {
-  find: (schema: string, options: FindOptionsType) => Promise<any>;
-  findOne: (schema: string, id: string) => Promise<any>;
-  create: (schema: string, data: any | any[]) => Promise<any>;
+  find: (
+    schema: string,
+    options: FindOptionsType,
+  ) => Promise<Array<DocumentLike>>;
+  findOne: (schema: string, id: string) => Promise<DocumentLike>;
+  create: (schema: string, data: any | any[]) => Promise<DocumentLike>;
   update: (
     schema: string,
     filter: FilterType,
     data: RecordType,
-  ) => Promise<any>;
-  updateById: (schema: string, id: string, data: RecordType) => Promise<any>;
-  delete: (schema: string, filter: FilterType) => Promise<any>;
-  deleteById: (schema: string, id: string) => Promise<any>;
+  ) => Promise<Array<DocumentLike>>;
+  updateById: (
+    schema: string,
+    id: string,
+    data: RecordType,
+  ) => Promise<DocumentLike>;
+  delete: (schema: string, filter: FilterType) => Promise<Array<DocumentLike>>;
+  deleteById: (schema: string, id: string) => Promise<DocumentLike>;
 };
 
-type DocumentLike = Document & RecordType;
+export type DocumentLike = Document & RecordType;
 
 export type HookContext = {
   request: Request;
@@ -210,7 +217,12 @@ export type PluginType = {
   name: string;
   depends?: string[];
   priority?: number;
-  inject: (options: OptionsType) => OptionsType;
+  inject: (schema: string, config: SchemaConfig) => SchemaConfig;
+};
+
+export type SchemaConfig = {
+  hooks?: SchemaHooksType;
+  plugins?: Array<PluginType>;
 };
 
 export type OptionsType = {
@@ -218,11 +230,8 @@ export type OptionsType = {
   connectionName?: string;
   inject?: any[];
   schemas?: {
-    [schema: string]: {
-      hooks?: SchemaHooksType;
-    };
+    [schema: string]: SchemaConfig;
   };
-  plugins?: Array<PluginType>;
 };
 
 export type FindOptionsType = {

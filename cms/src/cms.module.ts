@@ -5,20 +5,17 @@ import { createCMSController } from './cms.controller';
 import { HooksCollector } from './hooks-collector.service';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
+import { injectPlugins } from './utils/injectPlugins';
 
 @Module({})
 export class CMSModule {
   static register(options: OptionsType): DynamicModule {
     console.log('before plugin', options);
-
     /**
      * Inject plugins
      */
-    if (Array.isArray(options.plugins) && options.plugins.length) {
-      options = options.plugins?.reduce((pre, plugin) => {
-        return plugin.inject(pre);
-      }, options);
-    }
+    options = injectPlugins(options);
+
     console.log('after plugin', options);
 
     return {
