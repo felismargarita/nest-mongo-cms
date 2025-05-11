@@ -15,7 +15,7 @@ In short, this module focuses solely on delivering capabilities without locking 
 
 ## Installation
 
-It's still in beta stage, not published yet, if you are intersted on it, please contact me or issue a ticket directly.
+It's still in beta stage, not published yet, if you are interested in it, please [contact me](mailto:felismargarita@hotmail.com) or issue a ticket directly.
 
 ## Configure the module
 
@@ -40,11 +40,12 @@ It's still in beta stage, not published yet, if you are intersted on it, please 
 
 ## Plugins
 
-For those advanced features, it's highly recommmended to build via plugin, for now, 2 plugins are in building.
+For those advanced features, it's highly recommended to build plugin to support, for now, 2 core plugins are in building.
 
-[Version Control Plugin]() is made for version control, once you import this plugin, your content modification will be automatically tracked.
+[Version Control Plugin]() is made for version control, once you import it, your content modification will be automatically tracked.
 
 [Content Review Plugin]() is made for building a review / approve workflow for you, once you import this plugin, all of the cms content modification needs the review / approve, which could help you improve the content safty.
+
 ## Support
 
 [Mail to me](mailto:felismargarita@hotmail.com)
