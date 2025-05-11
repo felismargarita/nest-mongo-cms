@@ -1,5 +1,5 @@
 import { HooksCollector } from './hooks-collector.service';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Scope } from '@nestjs/common';
 import { Connection, Document } from 'mongoose';
 import {
   OptionsType,
@@ -23,7 +23,7 @@ import {
 import { HookException } from './exceptions/hook.exception';
 import { createPureValue } from './utils/pureValue';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class CMSService {
   logger = new Logger(CMSService.name);
   private hookContext: HookContext;
