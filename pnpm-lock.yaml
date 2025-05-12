@@ -62,6 +62,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^6.0.0
         version: 6.21.0(eslint@8.57.1)(typescript@5.8.3)
+      copyfiles:
+        specifier: ^2.4.1
+        version: 2.4.1
       eslint:
         specifier: ^8.42.0
         version: 8.57.1
@@ -104,6 +107,9 @@ importers:
 
   examples/simple:
     dependencies:
+      '@nest-mongo-cms/core':
+        specifier: workspace:*
+        version: link:../../cms
       '@nest-mongo-cms/plugins':
         specifier: workspace:*
         version: link:../../plugins
@@ -122,9 +128,6 @@ importers:
       mongoose:
         specifier: ^8.13.2
         version: 8.13.2
-      nest-mongo-cms:
-        specifier: workspace:*
-        version: link:../../cms
       reflect-metadata:
         specifier: ^0.1.13
         version: 0.1.14
@@ -208,15 +211,15 @@ importers:
         specifier: ^3.24.4
         version: 3.24.4
     devDependencies:
+      '@nest-mongo-cms/core':
+        specifier: workspace:*
+        version: link:../cms
       '@nestjs/common':
         specifier: ^10.0.0
         version: 10.4.17(reflect-metadata@0.1.14)(rxjs@7.8.2)
       copyfiles:
         specifier: ^2.4.1
         version: 2.4.1
-      nest-mongo-cms:
-        specifier: workspace:*
-        version: link:../cms
       prettier:
         specifier: ^3.0.0
         version: 3.5.3
