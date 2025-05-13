@@ -1,13 +1,14 @@
 {
   "name": "@nest-mongo-cms/core",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1-alpha.2",
   "description": "",
   "author": "",
   "license": "MIT",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
+  "files": ["./dist", "package.json", "README.md"],
   "scripts": {
-    "build": "nest build && copyfiles package.json README.md .npmignore dist",
+    "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

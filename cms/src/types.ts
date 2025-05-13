@@ -212,7 +212,7 @@ export type BeforeUpdateHookParams = ExtractHookParams<'beforeUpdate'>;
 export type AfterDeleteHookParams = ExtractHookParams<'afterDelete'>;
 export type BeforeDeleteHookParams = ExtractHookParams<'beforeDelete'>;
 export type AfterErrorHookParams = ExtractHookParams<'afterError'>;
-
+export type CatchHookExceptionParams = ExtractHookParams<'catchHookException'>;
 export type PluginType = {
   name: string;
   depends?: string[];
