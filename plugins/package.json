@@ -1,16 +1,16 @@
 {
   "name": "@nest-mongo-cms/plugins",
-  "version": "0.0.1-alpha.1",
+  "version": "0.0.1-alpha.2",
   "description": "",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
+  "files": ["./dist", "package.json", "README.md"],
   "scripts": {
-    "build": "tsc && copyfiles package.json README.md .npmignore dist",
+    "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
     "@nestjs/common": "^10.0.0",
-    "copyfiles": "^2.4.1",
     "@nest-mongo-cms/core": "workspace:*",
     "prettier": "^3.0.0",
     "source-map-support": "^0.5.21",
