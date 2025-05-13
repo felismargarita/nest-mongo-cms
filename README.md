@@ -84,7 +84,29 @@ For those advanced features, it's highly recommended to build plugin to support,
 [Version Control Plugin]() is made for version control, once you import it, your content modification will be automatically tracked.
 
 [Content Review Plugin]() is made for building a review / approve workflow for you, once you import this plugin, all of the cms content modification needs the review / approve, which could help you improve the content safty.
-
+* install
+  ```
+  npm install @nest-mongo-cms/plugins
+  ```
+* import 
+  ```
+  import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
+  ```
+* activate
+  ```
+    CMSModule.register({
+      path: '/cms',
+      schemas: {
+        books: {
+          plugins: [
+            VersionControl({ max: 50, collection: '__book_versions' }),
+            ContentReview({ collection: '__books_review' }),
+          ]
+        }
+      }
+    }
+  
+  ```
 ## Support
 
 [Mail to me](mailto:felismargarita@hotmail.com)
