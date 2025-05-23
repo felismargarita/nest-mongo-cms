@@ -35,12 +35,15 @@ export type HookContext = {
   [prop: string]: any;
 };
 
+export type DeferredCall = () => void | Promise<void>;
+
 export type HookTypeNoReturn = (params: {
   schema: string;
   data: any;
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<void> | void;
 
 export type AfterQueryHookType = (params: {
@@ -50,6 +53,7 @@ export type AfterQueryHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<DocumentLike> | DocumentLike;
 
 export type BeforeCreateHookType = (params: {
@@ -59,6 +63,7 @@ export type BeforeCreateHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<RecordType> | RecordType;
 
 export type AfterCreateHookType = (params: {
@@ -70,6 +75,7 @@ export type AfterCreateHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<DocumentLike> | DocumentLike;
 
 export type BeforeUpdateHookType = (params: {
@@ -81,6 +87,7 @@ export type BeforeUpdateHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<DocumentLike> | DocumentLike;
 
 export type AfterUpdateHookType = (params: {
@@ -93,6 +100,7 @@ export type AfterUpdateHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<DocumentLike> | DocumentLike;
 
 export type BeforeDeleteHookType = (params: {
@@ -102,6 +110,7 @@ export type BeforeDeleteHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<any> | any;
 
 export type AfterDeleteHookType = (params: {
@@ -111,6 +120,7 @@ export type AfterDeleteHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<any> | any;
 
 export type AfterErrorHookType = (params: {
@@ -120,6 +130,7 @@ export type AfterErrorHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  defer: (call: DeferredCall) => void;
 }) => Promise<void> | void;
 
 export type OperationHookType = (params: {
