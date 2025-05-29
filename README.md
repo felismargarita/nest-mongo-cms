@@ -66,6 +66,15 @@ export class AppModule {}
 |plugins|Object|activate your own plugin|
 
 ## Hooks
+Each Hook exposes a special parameter called `defer`, which deserves explicit emphasis upfront. ​If your Hook involves either of the following types of operations:
+* Data-mutating actions​ (e.g., database writes, state changes) that impact external or internal systems.
+
+* Non-idempotent or irreversible operations​ (e.g., network calls, file system operations) that cannot be easily rolled back or replayed.
+​You should wrap these operations with defer.​​ Actions captured by defer are ​not executed immediately; instead, they are queued and triggered ​atomically​ only after ​all Hooks have completed successfully.
+
+​Why this matters:
+Certain Hooks might intentionally terminate the execution flow (e.g., due to permission errors, validation failures, or business logic interruptions). If sensitive operations are not deferred, partial execution could leave global data in an inconsistent state (e.g., some changes committed while others were aborted). By deferring such operations, you ensure ​all-or-nothing semantics: either all deferred actions execute, or none do, preserving data consistency across the system.
+
 * afterQuery
 * beforeCreate
 * afterCreate
