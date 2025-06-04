@@ -60,14 +60,15 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
 
     afterCreateHooks.unshift(async (params) => {
       const { pureDocument, document, rawDb } = params;
-      const client = rawDb.getClient();
-      
-      await client.db().collection(versionCollection).insertOne({
-        pid: pureDocument._id,
-        operationAt: new Date(),
-        operationType: 'create',
-        data: pureDocument,
-      });
+      params.defer(async () => {
+        const client = rawDb.getClient();
+        await client.db().collection(versionCollection).insertOne({
+          pid: pureDocument._id,
+          operationAt: new Date(),
+          operationType: 'create',
+          data: pureDocument,
+        });
+      })
       return document;
     });
     hooks.afterCreate = afterCreateHooks;
@@ -79,34 +80,34 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
     afterUpdateHooks.unshift(async (params) => {
       const { pureCurrentDocument, currentDocument , rawDb } = params
 
-      const collection = rawDb.getClient().db().collection(versionCollection);
-      
-      /**
-       * insert the current version
-       */
-      await collection.insertOne({
-        pid: pureCurrentDocument._id,
-        operationAt: new Date(),
-        operationType: 'update',
-        data: pureCurrentDocument,
-      });
+      params.defer(async () => {
+        const collection = rawDb.getClient().db().collection(versionCollection);
+        /**
+         * insert the current version
+         */
+        await collection.insertOne({
+          pid: pureCurrentDocument._id,
+          operationAt: new Date(),
+          operationType: 'update',
+          data: pureCurrentDocument,
+        });
 
-      /**
-       * clear those old versions
-       */
-      const obsoleteVersions = await collection
-      .find({
-        pid: currentDocument._id,
-        operationType: 'update'
+        /**
+         * clear those old versions
+         */
+        const obsoleteVersions = await collection
+        .find({
+          pid: currentDocument._id,
+          operationType: 'update'
+        })
+        .sort({ operationAt: 'desc' })
+        .skip(max)
+        .toArray();
+
+        for (const obsoleteVersion of obsoleteVersions) {
+          await collection.deleteOne({ _id: obsoleteVersion._id })
+        }
       })
-      .sort({ operationAt: 'desc' })
-      .skip(max)
-      .toArray();
-
-      for (const obsoleteVersion of obsoleteVersions) {
-        await collection.deleteOne({ _id: obsoleteVersion._id })
-      }
-
       return currentDocument;
     });
 
@@ -119,19 +120,20 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
     const afterDeleteHooks = hooks.afterDelete ?? []
 
     afterDeleteHooks.unshift(async (params) => {
-      const { document, pureDocument, rawDb } = params
-      const client = rawDb.getClient();
-      await client.db().collection(versionCollection).insertOne({
-        pid: pureDocument._id,
-        operationAt: new Date(),
-        operationType: 'delete',
-        data: pureDocument,
-      });
+      const { pureDocument, rawDb } = params
+      params.defer(async () => {
+        const client = rawDb.getClient();
+        await client.db().collection(versionCollection).insertOne({
+          pid: pureDocument._id,
+          operationAt: new Date(),
+          operationType: 'delete',
+          data: pureDocument,
+        });
+      })
     });
     hooks.afterDelete = afterDeleteHooks
 
     // ################################################
-
 
     /**
      * inject operation

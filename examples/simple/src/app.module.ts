@@ -50,7 +50,7 @@ import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
         books: {
           plugins: [
             VersionControl({ max: 5, collection: '__book_versions' }),
-            ContentReview({ collection: '__books_review' }),
+            // ContentReview({ collection: '__books_review' }),
           ]
         }
       }
