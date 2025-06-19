@@ -59,15 +59,20 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
     const afterCreateHooks = hooks.afterCreate ?? []
 
     afterCreateHooks.unshift(async (params) => {
-      const { pureDocument, document, rawDb } = params;
+      const { pureDocument, document, rawDb, db } = params;
       params.defer(async () => {
         const client = rawDb.getClient();
-        await client.db().collection(versionCollection).insertOne({
-          pid: pureDocument._id,
-          operationAt: new Date(),
-          operationType: 'create',
-          data: pureDocument,
-        });
+        await client.db().collection(versionCollection).insertOne(
+          {
+            pid: pureDocument._id,
+            operationAt: new Date(),
+            operationType: 'create',
+            data: pureDocument,
+          },
+          {
+            session: await db.mongoSession.getMongoSession()
+          }
+        );
       })
       return document;
     });
@@ -78,19 +83,24 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
      */
     const afterUpdateHooks = hooks.afterUpdate ?? []
     afterUpdateHooks.unshift(async (params) => {
-      const { pureCurrentDocument, currentDocument , rawDb } = params
+      const { pureCurrentDocument, currentDocument , rawDb, db } = params
 
       params.defer(async () => {
         const collection = rawDb.getClient().db().collection(versionCollection);
         /**
          * insert the current version
          */
-        await collection.insertOne({
-          pid: pureCurrentDocument._id,
-          operationAt: new Date(),
-          operationType: 'update',
-          data: pureCurrentDocument,
-        });
+        await collection.insertOne(
+          {
+            pid: pureCurrentDocument._id,
+            operationAt: new Date(),
+            operationType: 'update',
+            data: pureCurrentDocument,
+          },
+          {
+            session: await db.mongoSession.getMongoSession()
+          }
+        );
 
         /**
          * clear those old versions
@@ -105,7 +115,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
         .toArray();
 
         for (const obsoleteVersion of obsoleteVersions) {
-          await collection.deleteOne({ _id: obsoleteVersion._id })
+          await collection.deleteOne({ _id: obsoleteVersion._id }, { session: await db.mongoSession.getMongoSession() })
         }
       })
       return currentDocument;
@@ -120,7 +130,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
     const afterDeleteHooks = hooks.afterDelete ?? []
 
     afterDeleteHooks.unshift(async (params) => {
-      const { pureDocument, rawDb } = params
+      const { pureDocument, rawDb, db } = params
       params.defer(async () => {
         const client = rawDb.getClient();
         await client.db().collection(versionCollection).insertOne({
@@ -128,7 +138,7 @@ const VersionControl = (_pluginParams: PluginConfigType): PluginType=> {
           operationAt: new Date(),
           operationType: 'delete',
           data: pureDocument,
-        });
+        }, { session: await db.mongoSession.getMongoSession() });
       })
     });
     hooks.afterDelete = afterDeleteHooks

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { Connection, Document } from 'mongoose';
+import { Connection, Document, ClientSession } from 'mongoose';
 import { HookException } from './exceptions/hook.exception';
 
-type DBType = {
+export type DBType = {
   find: (
     schema: string,
     options: FindOptionsType,
@@ -21,6 +21,11 @@ type DBType = {
   ) => Promise<DocumentLike>;
   delete: (schema: string, filter: FilterType) => Promise<Array<DocumentLike>>;
   deleteById: (schema: string, id: string) => Promise<DocumentLike>;
+  mongoSession: {
+    getMongoSession: () => Promise<ClientSession>;
+    commitTransaction: () => Promise<void>;
+    abortTransaction: () => Promise<void>;
+  };
 };
 
 export type DocumentLike = Document & RecordType;
@@ -63,6 +68,7 @@ export type BeforeCreateHookType = (params: {
   db: DBType;
   rawDb: Connection;
   context: HookContext;
+  mongoSession?: ClientSession;
   defer: (call: DeferredCall) => void;
 }) => Promise<RecordType> | RecordType;
 

@@ -7,16 +7,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ChapterSchema } from './chapter.schema';
 import { HookService } from './hook.service';
 import { Hook2Service } from './hook2.service';
-import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
+import { VersionControl } from '@nest-mongo-cms/plugins';
 
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb://localhost/cms-test', {
-      connectionName: 'library1',
-    }),
-    MongooseModule.forRoot('mongodb://localhost/cms-new', {
-      connectionName: 'library2',
-    }),
+    MongooseModule.forRoot(
+      'mongodb://localhost:27017,localhost:27018,localhost:27019/?readPreference=primary&replicaSet=rs0',
+      {
+        connectionName: 'library1',
+      },
+    ),
     MongooseModule.forFeature(
       [
         {
@@ -30,30 +30,25 @@ import { VersionControl, ContentReview } from '@nest-mongo-cms/plugins';
       ],
       'library1',
     ),
-    MongooseModule.forFeature(
-      [
-        {
-          name: 'books',
-          schema: BookSchema,
-        },
-        {
-          name: 'chapters',
-          schema: ChapterSchema,
-        },
-      ],
-      'library2',
-    ),
     CMSModule.register({
       path: '/cms1',
       connectionName: 'library1',
       schemas: {
         books: {
+          hooks: {
+            afterCreate: [
+              (x) => {
+                console.log(x);
+                return x.document;
+              },
+            ],
+          },
           plugins: [
             VersionControl({ max: 5, collection: '__book_versions' }),
             // ContentReview({ collection: '__books_review' }),
-          ]
-        }
-      }
+          ],
+        },
+      },
     }),
   ],
   controllers: [AppController],

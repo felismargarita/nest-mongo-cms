@@ -1,6 +1,6 @@
 import { HooksCollector } from './hooks-collector.service';
 import { Injectable, Logger, NotFoundException, Scope } from '@nestjs/common';
-import { Connection, Document } from 'mongoose';
+import { ClientSession, Connection, Document } from 'mongoose';
 import {
   OptionsType,
   FindOptionsType,
@@ -19,6 +19,7 @@ import {
   AfterQueryHookType,
   CatchHookExceptionDataType,
   DocumentLike,
+  DBType,
 } from './types';
 import { HookException } from './exceptions/hook.exception';
 import { createPureValue } from './utils/pureValue';
@@ -28,13 +29,35 @@ import { produceDeferCalls } from './utils/deferredCallFactory';
 export class CMSService {
   logger = new Logger(CMSService.name);
   private hookContext: HookContext;
+  private mongoSession?: ClientSession;
   constructor(
     private readonly connection: Connection,
     private readonly options: OptionsType,
     private readonly hooksCollector: HooksCollector,
   ) {}
 
-  _connection = {
+  private async getMongoSession() {
+    if (!this.mongoSession) {
+      this.mongoSession = await this.connection.startSession();
+    }
+    return this.mongoSession;
+  }
+
+  private async commitTransaction() {
+    if (this.mongoSession) {
+      await this.mongoSession.commitTransaction();
+    }
+    this.mongoSession = null;
+  }
+
+  private async abortTransaction() {
+    if (this.mongoSession) {
+      await this.mongoSession.abortTransaction();
+    }
+    this.mongoSession = null;
+  }
+
+  _connection: DBType = {
     find: async (schema: string, options: FindOptionsType) => {
       try {
         const { skip, limit } = options;
@@ -170,6 +193,11 @@ export class CMSService {
         throw e;
       }
     },
+    mongoSession: {
+      getMongoSession: this.getMongoSession,
+      commitTransaction: this.commitTransaction,
+      abortTransaction: this.abortTransaction,
+    },
   };
 
   private async createOne(schema: string, data: RecordType) {
@@ -189,7 +217,10 @@ export class CMSService {
       }
     }
     const model = this.connection.model(schema);
-    const docs = await model.create([data], { new: true });
+    const docs = await model.create([data], {
+      new: true,
+      session: await this.getMongoSession(),
+    });
     if (docs.length === 1) {
       let document: Document = docs[0];
       const pureData = createPureValue(data);
@@ -217,6 +248,7 @@ export class CMSService {
             e,
           );
         } else {
+          await this.abortTransaction();
           throw e;
         }
       }
@@ -265,6 +297,7 @@ export class CMSService {
       .model(schema)
       .findByIdAndUpdate(originalDoc._id, hookedData, {
         new: true,
+        session: await this.getMongoSession(),
       })
       .lean()) as any;
 
@@ -295,6 +328,7 @@ export class CMSService {
           e,
         );
       } else {
+        await this.abortTransaction();
         throw e;
       }
     }
@@ -320,7 +354,12 @@ export class CMSService {
       }
     }
 
-    await this.connection.model(schema).deleteOne({ _id: document._id });
+    await this.connection
+      .model(schema)
+      .deleteOne(
+        { _id: document._id },
+        { session: await this.getMongoSession() },
+      );
     try {
       await this.executeAfterDeleteHooks(schema, document, pureDocument);
     } catch (e) {
@@ -335,6 +374,7 @@ export class CMSService {
           e,
         );
       } else {
+        await this.abortTransaction();
         throw e;
       }
     }
