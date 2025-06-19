@@ -20,16 +20,18 @@ import {
   CatchHookExceptionDataType,
   DocumentLike,
   DBType,
+  DeferredCall,
 } from './types';
 import { HookException } from './exceptions/hook.exception';
 import { createPureValue } from './utils/pureValue';
-import { produceDeferCalls } from './utils/deferredCallFactory';
 
 @Injectable({ scope: Scope.REQUEST })
 export class CMSService {
   logger = new Logger(CMSService.name);
   private hookContext: HookContext;
   private mongoSession?: ClientSession;
+  private deferredCalls: DeferredCall[] = [];
+
   constructor(
     private readonly connection: Connection,
     private readonly options: OptionsType,
@@ -55,6 +57,19 @@ export class CMSService {
       await this.mongoSession.abortTransaction();
     }
     this.mongoSession = null;
+  }
+
+  private async defer(fn: DeferredCall) {
+    this.deferredCalls.push(fn);
+  }
+  private async deferCall() {
+    return Promise.all(this.deferredCalls.map((fn) => fn()));
+
+    /**
+     * The this.deferredCalls no need to be cleared manually,
+     * since this request scope instance will be GC entirely
+     * after the request finish
+     */
   }
 
   _connection: DBType = {
@@ -194,9 +209,9 @@ export class CMSService {
       }
     },
     mongoSession: {
-      getMongoSession: this.getMongoSession,
-      commitTransaction: this.commitTransaction,
-      abortTransaction: this.abortTransaction,
+      getMongoSession: this.getMongoSession.bind(this),
+      commitTransaction: this.commitTransaction.bind(this),
+      abortTransaction: this.abortTransaction.bind(this),
     },
   };
 
@@ -403,7 +418,6 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterQuery ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterQuery ?? [];
-    const { defer, deferCall } = produceDeferCalls();
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
       const hooks = hooksGroup[i];
@@ -416,11 +430,11 @@ export class CMSService {
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
-    await deferCall();
+    await this.deferCall();
     return document;
   }
 
@@ -433,7 +447,6 @@ export class CMSService {
       this.options.schemas?.[schema]?.hooks.beforeCreate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.beforeCreate ?? [];
-    const { defer, deferCall } = produceDeferCalls();
 
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
@@ -447,12 +460,12 @@ export class CMSService {
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
 
-    await deferCall();
+    await this.deferCall();
     return data;
   }
 
@@ -466,7 +479,6 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterCreate ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterCreate ?? [];
-    const { defer, deferCall } = produceDeferCalls();
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
       const hooks = hooksGroup[i];
@@ -481,12 +493,12 @@ export class CMSService {
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
 
-    await deferCall();
+    await this.deferCall();
 
     return document;
   }
@@ -503,7 +515,6 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.beforeUpdate ?? [];
     const hooksGroup = [optionHooks, decorationHooks];
-    const { defer, deferCall } = produceDeferCalls();
 
     for (let i = 0; i < 2; i++) {
       const hooks = hooksGroup[i];
@@ -518,11 +529,11 @@ export class CMSService {
           originalDocument,
           targetDocument,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
-    await deferCall();
+    await this.deferCall();
     return data;
   }
 
@@ -538,7 +549,6 @@ export class CMSService {
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterUpdate ?? [];
     const hooksGroup = [optionHooks, decorationHooks];
-    const { defer, deferCall } = produceDeferCalls();
     for (let i = 0; i < 2; i++) {
       const hooks = hooksGroup[i];
       for (const _hook of hooks) {
@@ -553,11 +563,11 @@ export class CMSService {
           originalDocument,
           currentDocument,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
-    await deferCall();
+    await this.deferCall();
 
     return currentDocument;
   }
@@ -571,7 +581,6 @@ export class CMSService {
       this.options.schemas?.[schema]?.hooks.beforeDelete ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.beforeDelete ?? [];
-    const { defer, deferCall } = produceDeferCalls();
 
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
@@ -585,12 +594,12 @@ export class CMSService {
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
 
-    await deferCall();
+    await this.deferCall();
   }
   async executeAfterDeleteHooks(
     schema: string,
@@ -600,7 +609,6 @@ export class CMSService {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterDelete ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterDelete ?? [];
-    const { defer, deferCall } = produceDeferCalls();
 
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
@@ -614,19 +622,18 @@ export class CMSService {
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
 
-    await deferCall();
+    await this.deferCall();
   }
 
   async executeAfterErrorHooks(schema: string, path: string, error: Error) {
     const optionHooks = this.options.schemas?.[schema]?.hooks.afterError ?? [];
     const decorationHooks =
       this.hooksCollector.schemaHooks[schema]?.afterError ?? [];
-    const { defer, deferCall } = produceDeferCalls();
 
     const hooksGroup = [optionHooks, decorationHooks];
     for (let i = 0; i < 2; i++) {
@@ -640,12 +647,12 @@ export class CMSService {
           db: this._connection,
           rawDb: this.connection,
           context: this.hookContext,
-          defer,
+          defer: this.defer.bind(this),
         });
       }
     }
 
-    await deferCall();
+    await this.deferCall();
   }
 
   async executeExceptionHooks<T extends keyof SchemaHooksType>(

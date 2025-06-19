@@ -11,12 +11,9 @@ import { VersionControl } from '@nest-mongo-cms/plugins';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(
-      'mongodb://localhost:27017,localhost:27018,localhost:27019/?readPreference=primary&replicaSet=rs0',
-      {
-        connectionName: 'library1',
-      },
-    ),
+    MongooseModule.forRoot('mongodb://localhost:27017/cms-test', {
+      connectionName: 'library1',
+    }),
     MongooseModule.forFeature(
       [
         {
