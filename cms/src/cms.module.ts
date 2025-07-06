@@ -6,7 +6,6 @@ import { HooksCollector } from './hooks-collector.service';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { injectPlugins } from './utils/injectPlugins';
-
 @Module({})
 export class CMSModule {
   static register(options: OptionsType): DynamicModule {

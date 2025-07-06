@@ -1,2 +1,2 @@
-export * from './version-control';
-export * from './review';
+export * from './plugin-version-control';
+export * from './plugin-review';

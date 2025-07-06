@@ -70,6 +70,7 @@ export class CMSService {
      * since this request scope instance will be GC entirely
      * after the request finish
      */
+    // this.deferredCalls = [] # Not needed
   }
 
   _connection: DBType = {
@@ -248,6 +249,7 @@ export class CMSService {
           pureData,
           pureDocument,
         );
+        await this.commitTransaction();
         return document;
       } catch (e) {
         if (e instanceof HookException) {
@@ -327,6 +329,7 @@ export class CMSService {
         currentDoc,
         pureCurrentDocument,
       );
+      await this.commitTransaction();
       return doc;
     } catch (e) {
       if (e instanceof HookException) {
@@ -377,6 +380,7 @@ export class CMSService {
       );
     try {
       await this.executeAfterDeleteHooks(schema, document, pureDocument);
+      await this.commitTransaction();
     } catch (e) {
       if (e instanceof HookException) {
         return await this.executeExceptionHooks(
